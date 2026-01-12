@@ -385,6 +385,7 @@ def memory_synthesize(
     summary: str,
     topics: list[str] = None,
     keywords: list[str] = None,
+    delete_parents: bool = False,
 ) -> dict:
     """Create a synthesized memory from multiple parent memories.
 
@@ -393,7 +394,7 @@ def memory_synthesize(
     1. Review related memories (e.g., all music-related ones)
     2. Identify patterns or themes worth abstracting
     3. Create a synthesized insight using this tool
-    4. The parent memories are linked via parent_ids
+    4. Optionally delete redundant parents (useful for duplicates)
 
     Example: 5 memories about jazz guitarists → "User has deep appreciation
     for jazz guitar, especially fusion players"
@@ -403,6 +404,8 @@ def memory_synthesize(
         summary: The synthesized insight (1-3 sentences).
         topics: Topic tags for the synthesis.
         keywords: Keywords for search.
+        delete_parents: If True, delete parent memories after synthesis.
+            Use this when parents are duplicates or fully subsumed.
 
     Returns:
         Dict with the new synthesized memory's ID.
@@ -421,7 +424,7 @@ def memory_synthesize(
 
     new_level = max_parent_level + 1
 
-    # Create synthesized memory
+    # Create synthesized memory (skip dedupe since this is intentional)
     memory_id = store.add(
         summary=summary,
         level=new_level,
@@ -430,21 +433,36 @@ def memory_synthesize(
         keywords=keywords or [],
         source="synthesis",
         parent_ids=parent_ids,
+        dedupe=False,  # Don't dedupe synthesis results
     )
 
-    # Update parent memories to link to this child
-    for pid in parent_ids:
-        parent = store.get(pid)
-        if parent:
-            new_child_ids = parent.child_ids + [memory_id]
-            store.update(pid, child_ids=new_child_ids)
+    if delete_parents:
+        # Delete parent memories (they're subsumed by synthesis)
+        deleted_count = 0
+        for pid in parent_ids:
+            if store.delete(pid):
+                deleted_count += 1
+        return {
+            "status": "synthesized",
+            "id": memory_id,
+            "level": new_level,
+            "parent_count": len(parent_ids),
+            "parents_deleted": deleted_count,
+        }
+    else:
+        # Update parent memories to link to this child
+        for pid in parent_ids:
+            parent = store.get(pid)
+            if parent:
+                new_child_ids = parent.child_ids + [memory_id]
+                store.update(pid, child_ids=new_child_ids)
 
-    return {
-        "status": "synthesized",
-        "id": memory_id,
-        "level": new_level,
-        "parent_count": len(parent_ids),
-    }
+        return {
+            "status": "synthesized",
+            "id": memory_id,
+            "level": new_level,
+            "parent_count": len(parent_ids),
+        }
 
 
 @mcp.tool()
@@ -494,6 +512,99 @@ def memory_get_synthesis_candidates(
     return {
         "topics_with_candidates": len(candidates),
         "candidates": candidates,
+    }
+
+
+@mcp.tool()
+def memory_dedupe(
+    dry_run: bool = True,
+    threshold: float = 0.85,
+) -> dict:
+    """Find and optionally remove duplicate memories.
+
+    Uses Jaccard similarity on summary words to detect duplicates.
+    For each group of similar memories, keeps the one with the most detail
+    (longest full_text or most metadata).
+
+    Args:
+        dry_run: If True (default), only report duplicates without deleting.
+            Set to False to actually delete duplicates.
+        threshold: Similarity threshold (0.0-1.0). Default 0.85 means
+            85% word overlap is considered a duplicate.
+
+    Returns:
+        Dict with duplicate groups found and action taken.
+    """
+    store = get_store()
+    all_memories = store.get_all(limit=1000)
+
+    # Find duplicate groups
+    processed = set()
+    duplicate_groups = []
+
+    for i, m1 in enumerate(all_memories):
+        if m1.id in processed:
+            continue
+
+        words1 = set(m1.summary.lower().split())
+        if len(words1) < 3:
+            continue
+
+        group = [m1]
+        for m2 in all_memories[i+1:]:
+            if m2.id in processed:
+                continue
+
+            words2 = set(m2.summary.lower().split())
+            if len(words2) < 3:
+                continue
+
+            # Jaccard similarity
+            intersection = len(words1 & words2)
+            union = len(words1 | words2)
+            similarity = intersection / union if union > 0 else 0
+
+            if similarity >= threshold:
+                group.append(m2)
+                processed.add(m2.id)
+
+        if len(group) > 1:
+            processed.add(m1.id)
+            duplicate_groups.append(group)
+
+    # Process each group
+    results = []
+    deleted_count = 0
+
+    for group in duplicate_groups:
+        # Sort by quality: prefer longer full_text, more topics/keywords
+        def quality_score(m):
+            ft_len = len(m.full_text) if m.full_text else 0
+            return (ft_len, len(m.topics), len(m.keywords))
+
+        sorted_group = sorted(group, key=quality_score, reverse=True)
+        keep = sorted_group[0]
+        duplicates = sorted_group[1:]
+
+        group_info = {
+            "keep": {"id": keep.id, "summary": keep.summary[:80]},
+            "duplicates": [{"id": d.id, "summary": d.summary[:80]} for d in duplicates],
+        }
+
+        if not dry_run:
+            for dup in duplicates:
+                if store.delete(dup.id):
+                    deleted_count += 1
+            group_info["deleted"] = len(duplicates)
+
+        results.append(group_info)
+
+    return {
+        "dry_run": dry_run,
+        "duplicate_groups_found": len(duplicate_groups),
+        "total_duplicates": sum(len(g) - 1 for g in duplicate_groups),
+        "deleted": deleted_count if not dry_run else 0,
+        "groups": results,
     }
 
 
