@@ -110,13 +110,13 @@ def setup():
     commands_dir = claude_dir / "commands"
     commands_dir.mkdir(exist_ok=True)
 
-    src_command = data_path / "commands" / "clear-memories.md"
-    dst_command = commands_dir / "clear-memories.md"
-    if src_command.exists():
-        shutil.copy(src_command, dst_command)
-        click.echo("   /clear-memories command installed")
+    src_commands_dir = data_path / "commands"
+    if src_commands_dir.exists():
+        for cmd_file in src_commands_dir.glob("*.md"):
+            shutil.copy(cmd_file, commands_dir / cmd_file.name)
+            click.echo(f"   /{cmd_file.stem} command installed")
     else:
-        click.echo("   Warning: clear-memories.md not found in package data")
+        click.echo("   Warning: commands directory not found in package data")
 
     # 4. Install CLAUDE.md
     click.echo("\n4. Installing CLAUDE.md...")
@@ -137,9 +137,9 @@ def setup():
     click.echo("\n" + "=" * 55)
     click.echo("Setup complete!")
     click.echo("\nWhat was installed:")
-    click.echo("  - MCP server: oubli (13 memory tools)")
+    click.echo("  - MCP server: oubli (14 memory tools)")
     click.echo("  - Hooks: UserPromptSubmit, PreCompact, Stop")
-    click.echo("  - Slash command: /clear-memories")
+    click.echo("  - Slash commands: /clear-memories, /synthesize")
     click.echo("  - Instructions: ~/.claude/CLAUDE.md")
     click.echo(f"  - Data directory: {oubli_dir}")
     click.echo("\nRestart Claude Code to start using Oubli.")
@@ -189,10 +189,12 @@ def uninstall():
 
     # 3. Remove slash commands
     click.echo("\n3. Removing slash commands...")
-    command_path = claude_dir / "commands" / "clear-memories.md"
-    if command_path.exists():
-        command_path.unlink()
-        click.echo("   /clear-memories command removed")
+    oubli_commands = ["clear-memories.md", "synthesize.md"]
+    for cmd_name in oubli_commands:
+        command_path = claude_dir / "commands" / cmd_name
+        if command_path.exists():
+            command_path.unlink()
+            click.echo(f"   /{cmd_name.replace('.md', '')} command removed")
 
     # 4. Remove CLAUDE.md
     click.echo("\n4. Removing CLAUDE.md...")
