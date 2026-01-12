@@ -145,6 +145,23 @@ class MemoryStore:
                 self.TABLE_NAME,
                 schema=schema,
             )
+            # Create FTS index on summary and full_text for keyword search
+            self._ensure_fts_index()
+
+    def _ensure_fts_index(self):
+        """Create FTS index on summary and full_text if not exists."""
+        try:
+            # Check if index exists by looking at table indices
+            indices = self.table.list_indices()
+            fts_exists = any(idx.get('index_type') == 'FTS' for idx in indices)
+            if not fts_exists:
+                self.table.create_fts_index(['summary', 'full_text'], replace=True)
+        except Exception:
+            # If listing fails or index creation fails, try to create anyway
+            try:
+                self.table.create_fts_index(['summary', 'full_text'], replace=True)
+            except Exception:
+                pass  # Index may already exist or table is empty
 
     def add(
         self,
@@ -197,14 +214,32 @@ class MemoryStore:
         return [Memory.from_dict(r) for r in results]
 
     def search(self, query: str, limit: int = 10) -> list[Memory]:
-        """Search memories by keyword matching in summary and full_text.
+        """Search memories using LanceDB full-text search on summary and full_text.
 
-        Tokenizes query and scores based on word matches.
-        For now, uses simple string matching. Vector search added when embeddings available.
+        Uses BM25-based ranking for relevance scoring.
         """
-        all_memories = self.get_all(limit=1000)
+        if not query or not query.strip():
+            return []
 
-        # Tokenize query into words (alphanumeric, lowercase)
+        try:
+            # Ensure FTS index exists (handles incremental data)
+            self._ensure_fts_index()
+
+            # Use LanceDB native FTS
+            results = (
+                self.table
+                .search(query, query_type='fts', fts_columns=['summary', 'full_text'])
+                .limit(limit)
+                .to_list()
+            )
+            return [Memory.from_dict(r) for r in results]
+        except Exception:
+            # Fallback to basic search if FTS fails (e.g., empty table)
+            return self._fallback_search(query, limit)
+
+    def _fallback_search(self, query: str, limit: int = 10) -> list[Memory]:
+        """Fallback search using simple string matching."""
+        all_memories = self.get_all(limit=1000)
         query_words = [w.lower() for w in query.split() if len(w) >= 2]
         if not query_words:
             return []
@@ -216,25 +251,14 @@ class MemoryStore:
             full_text_lower = m.full_text.lower() if m.full_text else ""
 
             for word in query_words:
-                # Check summary (higher weight)
                 if word in summary_lower:
                     score += 2
-                # Check full_text
                 if word in full_text_lower:
                     score += 1
-                # Check keywords
-                for kw in m.keywords:
-                    if word in kw.lower():
-                        score += 1
-                # Check topics
-                for topic in m.topics:
-                    if word in topic.lower():
-                        score += 1
 
             if score > 0:
                 matches.append((score, m))
 
-        # Sort by score descending
         matches.sort(key=lambda x: x[0], reverse=True)
         return [m for _, m in matches[:limit]]
 
