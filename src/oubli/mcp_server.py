@@ -380,6 +380,37 @@ def memory_import(
 # ============================================================================
 
 @mcp.tool()
+def memory_synthesis_needed(threshold: int = 5) -> dict:
+    """Check if memory synthesis should be triggered.
+
+    Returns True if the number of unsynthesized Level 0 memories
+    (memories without children) exceeds the threshold.
+
+    Claude should call this after saving memories and trigger
+    /synthesize when needed.
+
+    Args:
+        threshold: Trigger synthesis when unsynthesized count exceeds this.
+            Default is 5.
+
+    Returns:
+        Dict with needed flag, count, and threshold.
+    """
+    store = get_store()
+    level_0 = store.get_by_level(0, limit=500)
+
+    # Count L0 memories that haven't been synthesized (no children)
+    unsynthesized = [m for m in level_0 if not m.child_ids]
+
+    return {
+        "synthesis_needed": len(unsynthesized) >= threshold,
+        "unsynthesized_count": len(unsynthesized),
+        "threshold": threshold,
+        "message": f"Run /synthesize" if len(unsynthesized) >= threshold else "No synthesis needed yet"
+    }
+
+
+@mcp.tool()
 def memory_synthesize(
     parent_ids: list[str],
     summary: str,

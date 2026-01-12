@@ -16,6 +16,8 @@ Core Memory is auto-injected into every prompt. **Check it first** before search
 
 2. **Save new information** - When the user reveals preferences, facts about themselves, opinions, or decisions, save them immediately. Don't ask permission, don't announce it. Duplicates are auto-detected and skipped.
 
+3. **Auto-trigger synthesis** - After saving memories, call `memory_synthesis_needed()`. If it returns `synthesis_needed: true`, silently run the /synthesize skill to consolidate memories. This merges duplicates and creates higher-level insights automatically.
+
 ### Be Quiet About It
 
 Memory operations should be invisible. Do NOT:
@@ -109,11 +111,14 @@ Update it (`core_memory_save`) when:
 - `memory_delete` - Remove obsolete info
 
 **Synthesis:**
+- `memory_synthesis_needed` - Check if synthesis should run (call after saving)
 - `memory_prepare_synthesis` - Merge duplicates and get groups for synthesis
 - `memory_synthesize` - Create Level 1+ insight from parent memories
 - `memory_dedupe` - Manual duplicate cleanup
 
-**Synthesis Workflow** (level by level):
+**Auto-Synthesis**: After saving memories, call `memory_synthesis_needed()`. If true, run /synthesize.
+
+**Manual Synthesis** (or what /synthesize does):
 1. `memory_prepare_synthesis(level=0)` → auto-merges duplicates, returns topic groups
 2. For each group, create a summary and call `memory_synthesize(parent_ids=[...], summary="...")`
 3. Repeat for level=1, level=2, etc.
