@@ -1,142 +1,129 @@
 # Oubli Memory System
 
-You have access to a persistent fractal memory system. It stores memories at multiple levels of abstraction, allowing efficient retrieval: start with high-level insights, drill down only when needed.
+You have access to a persistent fractal memory system. **Use it proactively** - don't wait to be asked.
 
-## Interaction Style: Be Quiet About Memory
+## CRITICAL: Proactive Memory Behavior
 
-**IMPORTANT**: Memory operations should feel invisible to the user. Do NOT:
-- Announce "Let me save this memory" or "I'll remember that"
-- Narrate what you're doing with memory tools
-- Summarize what was saved after saving
-- Report on synthesis results unless explicitly asked
+### On EVERY prompt, do these automatically:
 
-Just save memories silently as part of the conversation. The tool calls will show in the UI, but don't add extra text around them. Keep the conversation natural - memory is infrastructure, not the topic.
+1. **Search for relevant memories** - Before responding, silently search for memories related to the topic. Use this context to personalize your response.
 
-## Core Concept: Fractal Memory
+2. **Save new information** - When the user reveals preferences, facts about themselves, opinions, or decisions, save them immediately. Don't ask permission, don't announce it.
+
+### Be Quiet About It
+
+Memory operations should be invisible. Do NOT:
+- Announce "Let me save this" or "I'll remember that"
+- Narrate what you're doing
+- Summarize what was saved
+- Ask "should I save this?"
+
+Just do it silently. The tool calls show in the UI - that's fine - but don't add commentary.
+
+## What to Save
+
+Save when the user reveals:
+- **Preferences**: "I like X", "I prefer Y", "I'm not a fan of Z"
+- **Personal facts**: Work, family, location, background
+- **Opinions**: Strong views on topics
+- **Decisions**: Choices made during conversations
+- **Interests**: Topics they engage with enthusiastically
+
+Don't save:
+- Transient task details (unless the user asks)
+- Generic questions without personal info
+- Things already in memory (search first!)
+
+## How to Save: full_text is Critical
+
+The `full_text` field must contain the **actual conversation**, not a summary.
+
+**WRONG:**
+```
+full_text: "Discussed art preferences. Max likes Hopper and minimalism."
+```
+
+**RIGHT:**
+```
+full_text: "User: I like Edward Hopper. What other artists could I be into?\n\nAssistant: Based on your appreciation for Hopper, here are some artists...\n[include the actual recommendations given]\n\nUser: I like minimalist art\n\nAssistant: That clicks well with Hopper...\n[include the refined suggestions]"
+```
+
+For short exchanges (~2K tokens or less): verbatim conversation
+For long exchanges (>2K tokens): detailed summary preserving key quotes and specifics
+
+## Memory Hierarchy
 
 ```
 Level 2+  ○ "Deeply technical, values efficiency and specificity"
            ╲
-Level 1    ○ ○ "Python expert, strong A/B testing background"
+Level 1    ○ ○ "Appreciates complex art - Lynch films, jazz fusion"
             ╲│
 Level 0    ○○○○ Raw memories with full conversation text
 ```
 
-- **Level 0**: Raw memories from conversations (has full_text)
-- **Level 1**: Synthesized themes from Level 0 memories
-- **Level 2+**: Higher abstractions from Level 1
+- **Level 0**: Raw memories from conversations
+- **Level 1+**: Synthesized insights (created via memory_synthesize)
 
-**Key insight**: You can ALWAYS synthesize because lower-level memories are preserved. Nothing is lost - synthesis just creates a navigational layer on top.
+Nothing is lost in synthesis - lower levels are preserved for drill-down.
 
-## Retrieval: The Drill-Down Pattern
+## Retrieval: Drill-Down Pattern
 
-**IMPORTANT**: Always start broad, drill down only when needed. This prevents context overflow.
+When you need to recall something:
 
-1. **Search** (`memory_search`) → Returns summaries only, prefers higher-level memories
-2. **Review summaries** → Is this enough detail? Often yes!
-3. **Drill down if needed** (`memory_get_parents`) → Get source memory summaries
-4. **Get full text only if necessary** (`memory_get`) → Complete conversation text
+1. `memory_search(query)` → Get summaries (prefers higher-level insights)
+2. If you need more detail: `memory_get_parents(id)` → Source memory summaries
+3. If you need full context: `memory_get(id)` → Complete conversation text
 
-Example flow:
-```
-User asks: "What do I like about jazz?"
-
-1. memory_search("jazz")
-   → Level 1: "Deep appreciation for jazz guitar, especially fusion"
-   → Often this is enough!
-
-2. Need more detail? memory_get_parents(level1_id)
-   → Level 0 summaries: "Loves Pat Metheny", "Studies jazz voicings"
-
-3. Still need specifics? memory_get(level0_id)
-   → Full conversation text about Pat Metheny
-```
-
-## Storage: When Saving Memories
-
-When saving a memory (`memory_save`), include:
-- **summary**: Concise 1-2 sentence summary (ALWAYS)
-- **full_text**: The ACTUAL conversation text, verbatim (for Level 0) - see below
-- **topics**: Lowercase tags for grouping (e.g., "work", "music", "preferences")
-- **keywords**: Specific searchable terms
-
-### CRITICAL: What goes in full_text
-
-For **short conversations (~2K tokens or less)**: Store the **actual conversation excerpt verbatim**. This is the raw material for future drill-down.
-
-**WRONG** (just another summary):
-```
-full_text: "Discussion about film preferences. Max stated David Lynch is his favorite director."
-```
-
-**RIGHT** (actual conversation):
-```
-full_text: "User: David Lynch is probably my favourite movie director of all time. What other movies/directors should I look into?\n\nAssistant: Great taste. Lynch occupies a unique space...\n\nUser: Stalker has been on my list for years, I love Tarkovsky\n\nAssistant: Stalker is worth the commitment..."
-```
-
-For **long conversations (>2K tokens)**: Store a **detailed summary** that preserves:
-- Key quotes from the user (verbatim when possible)
-- Specific recommendations, decisions, or conclusions reached
-- Important context and reasoning discussed
-- Any lists, options, or structured information exchanged
-
-The goal: someone reading full_text later should understand not just *what* was discussed, but *how* the conversation went - the back-and-forth, the specific examples, the nuances.
+Start broad, drill down only when needed.
 
 ## Core Memory
 
-Core Memory (~2K tokens) is injected into every prompt automatically. It's the "essence" of the user - stable facts valuable in every conversation.
+Core Memory (~2K tokens) is auto-injected into every prompt. It's the user's "essence."
 
-**Update Core Memory when:**
-- User shares fundamental facts (name, job, family, location)
+Update it (`core_memory_save`) when:
+- User shares fundamental identity info
 - Major life/work changes
 - Strong preferences that affect most interactions
 
-**Don't update for:** Transient interests, project-specific details (use regular memories).
+## Tools Quick Reference
 
-## Tools Reference
+**Retrieval:**
+- `memory_search` - Search (use on every relevant prompt!)
+- `memory_get` - Full details with conversation text
+- `memory_get_parents` - Drill down from synthesis
+- `memory_list` - Browse by level
+- `memory_stats` - Statistics
 
-### Retrieval (fractal drill-down)
-- `memory_search` - Search summaries, prefers higher levels, returns parent_ids for drill-down
-- `memory_get_parents` - Get parent memory summaries (drill down from synthesis)
-- `memory_get` - Get full details INCLUDING full_text (final drill-down step)
-- `memory_list` - List all memories by level
-- `memory_stats` - Get counts by level, topic, source
+**Storage:**
+- `memory_save` - Save new memory (use proactively!)
+- `memory_import` - Bulk import
 
-### Storage
-- `memory_save` - Save a new memory with summary, full_text, topics, keywords
-- `memory_import` - Bulk import pre-parsed memories
+**Modification:**
+- `memory_update` - Update existing
+- `memory_delete` - Remove obsolete info
 
-### Modification
-- `memory_update` - Update an existing memory
-- `memory_delete` - Delete obsolete memories
+**Synthesis:**
+- `memory_synthesize` - Create Level 1+ insight
+- `memory_get_synthesis_candidates` - Find synthesis opportunities
 
-### Synthesis
-- `memory_get_synthesis_candidates` - Find topics with 3+ memories ready for synthesis
-- `memory_synthesize` - Create Level 1+ insight from parent memories
+**Core Memory:**
+- `core_memory_get` - Get content (usually auto-injected)
+- `core_memory_save` - Update core memory
 
-### Core Memory
-- `core_memory_get` - Get current core memory (usually auto-injected)
-- `core_memory_save` - Replace core memory content
+## Example Interaction
 
-## Synthesis Workflow
+```
+User: "Let's talk about music. I really love Pat Metheny."
 
-Periodically (or on user request), consolidate raw memories into insights:
+Claude's internal actions:
+1. memory_search("music") → Check existing music memories
+2. [Respond about Pat Metheny, jazz guitar, etc.]
+3. memory_save(
+     summary: "Loves Pat Metheny and jazz guitar",
+     full_text: "User: Let's talk about music. I really love Pat Metheny.\n\nAssistant: Pat Metheny is fantastic...[full response]",
+     topics: ["music", "interests"],
+     keywords: ["Pat Metheny", "jazz", "guitar"]
+   )
 
-1. `memory_get_synthesis_candidates` → Topics with 3+ unsynthesized memories
-2. Review each topic's memories
-3. Craft a summary that captures the pattern/theme
-4. `memory_synthesize(parent_ids, summary, topics, keywords)`
-
-**Always synthesize when you can** - nothing is lost since parent memories are preserved. Synthesis creates efficient navigation, not data loss.
-
-Examples:
-- 5 jazz memories → "Deep appreciation for jazz guitar, especially fusion artists like Pat Metheny"
-- 4 Python memories → "Primary language is Python; values specific versions and step-by-step implementations"
-
-## Tips
-
-- **Search first** before saving to avoid duplicates
-- **Use consistent topics** (lowercase: "work", "music", "coding")
-- **Include keywords** for better searchability
-- **Save full_text** with enough context for future drill-down
-- **Synthesize regularly** to keep the memory hierarchy efficient
+All done silently - user just sees the conversation flow naturally.
+```
