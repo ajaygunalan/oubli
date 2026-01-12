@@ -35,13 +35,61 @@ uv pip install -e .
 
 echo ""
 echo "3. Registering MCP server with Claude Code..."
-claude mcp add oubli -- "$SCRIPT_DIR/.venv/bin/python" -m oubli.mcp_server
+claude mcp add oubli -- "$SCRIPT_DIR/.venv/bin/python" -m oubli.mcp_server || echo "   (MCP server already registered, continuing...)"
 
 echo ""
-echo "4. Updating plugin hooks with installation path..."
-# Update hooks.json with the actual installation path
-sed -i.bak "s|OUBLI_INSTALL_PATH|$SCRIPT_DIR|g" "$SCRIPT_DIR/.claude-plugin/hooks/hooks.json"
-rm -f "$SCRIPT_DIR/.claude-plugin/hooks/hooks.json.bak"
+echo "4. Setting up hooks in ~/.claude/settings.json..."
+# Create ~/.claude if it doesn't exist
+mkdir -p ~/.claude
+
+# Create or update settings.json with our hooks
+cat > /tmp/oubli_hooks.json << 'HOOKS'
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INSTALL_PATH_PLACEHOLDER/.venv/bin/python -m oubli.cli inject-context"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "IMPORTANT: Context is about to be compacted. Before that happens, save any memory-worthy information from this conversation.\n\nScan the conversation for:\n- User preferences, opinions, or tastes revealed\n- Personal information shared (work, family, interests)\n- Decisions made or conclusions reached\n- Technical preferences or patterns\n\nFor EACH distinct piece of information, call memory_save with:\n- summary: Concise 1-2 sentence summary\n- full_text: The relevant conversation excerpt\n- topics: Lowercase topic tags\n- keywords: Searchable terms\n\nDo NOT skip this - information not saved will be lost after compaction."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Session ending. Save any memory-worthy information from this conversation.\n\nScan for:\n- User preferences, opinions, or tastes revealed\n- Personal information (work, family, interests)\n- Decisions or conclusions\n- Technical preferences\n\nFor each distinct piece, call memory_save with summary, full_text, topics, keywords.\n\nAlso: If anything fundamental about the user was revealed (identity, major preferences, life changes), update Core Memory via core_memory_save.\n\nIf truly nothing worth saving, respond: No new memories."
+          }
+        ]
+      }
+    ]
+  }
+}
+HOOKS
+# Replace placeholder with actual path
+sed -i.bak "s|INSTALL_PATH_PLACEHOLDER|$SCRIPT_DIR|g" /tmp/oubli_hooks.json
+rm -f /tmp/oubli_hooks.json.bak
+
+# If settings.json exists, we need to merge; otherwise just copy
+if [ -f ~/.claude/settings.json ]; then
+    echo "   Note: ~/.claude/settings.json exists. Backing up to settings.json.bak"
+    cp ~/.claude/settings.json ~/.claude/settings.json.bak
+fi
+cp /tmp/oubli_hooks.json ~/.claude/settings.json
+rm /tmp/oubli_hooks.json
 
 echo ""
 echo "5. Creating data directory..."
