@@ -63,7 +63,7 @@ The Core Memory is a special, always-present context block (~2K tokens) that con
 ### Key Principle
 
 Both storage AND retrieval are fractal:
-- **Storage:** Raw → synthesized when thresholds are met via auto-triggered /synthesize
+- **Storage:** Raw → synthesized when user runs /synthesize
 - **Retrieval:** Check Core Memory first → search only if needed → drill down to full text only when needed
 
 ---
@@ -381,7 +381,7 @@ or memory_get(id) for full_text         │
    - Family info (any relatives)
    - Work changes (new projects, role changes)
    - Location/identity changes
-5. **Auto-trigger synthesis** - Call `memory_synthesis_needed()` after saving, run /synthesize if needed
+5. **User-triggered synthesis** - Run /synthesize on demand to consolidate memories
 6. **Be quiet** - No narration, just do it silently
 
 ### What to Save
@@ -434,7 +434,7 @@ dependencies = [
 
 ## Current Implementation Status
 
-### Completed (v0.2.2)
+### Completed (v0.2.3)
 
 - [x] PyPI installation (`pip install oubli && oubli setup`)
 - [x] **Hybrid search** - BM25 FTS + semantic embeddings (sentence-transformers)
@@ -445,7 +445,7 @@ dependencies = [
 - [x] Hooks: UserPromptSubmit (core memory), PreCompact, Stop
 - [x] /clear-memories slash command
 - [x] /synthesize skill with Core Memory update
-- [x] Auto-synthesis triggering (`memory_synthesis_needed`)
+- [x] Synthesis via /synthesize command (user-triggered)
 - [x] `memory_prepare_synthesis` for duplicate merging + grouping
 - [x] Immediate Core Memory updates for fundamental changes
 - [x] Proactive memory behavior instructions (CLAUDE.md)
@@ -461,7 +461,7 @@ dependencies = [
 
 ## Differences from SPEC.md (v1)
 
-| Feature | SPEC v1 | Current Implementation (v0.2.2) |
+| Feature | SPEC v1 | Current Implementation (v0.2.3) |
 |---------|---------|----------------------|
 | Search | Hybrid (BM25 + embeddings) | Hybrid (BM25 + sentence-transformers) |
 | Embeddings | sentence-transformers | all-MiniLM-L6-v2 (384 dims) |

@@ -104,7 +104,7 @@ src/oubli/
 - **PreCompact** - Saves memories before context compaction (prevents losing info in long sessions)
 - **Stop** - Saves memories at session end
 
-## Current Status (v0.2.2)
+## Current Status (v0.2.3)
 
 ### Completed
 - PyPI installation (`pip install oubli && oubli setup`)
@@ -119,7 +119,7 @@ src/oubli/
 - Session hooks (UserPromptSubmit for core memory, PreCompact + Stop for auto-save)
 - `/clear-memories` slash command
 - `/synthesize` skill for full synthesis workflow
-- `memory_synthesis_needed` for auto-triggering synthesis
+- `memory_synthesis_needed` to check if synthesis would be useful
 - `memory_prepare_synthesis` for merging duplicates before synthesis
 - Immediate Core Memory updates for fundamental changes (family, work, identity)
 - Instructions for Claude in `src/oubli/data/CLAUDE.md`

@@ -18,8 +18,6 @@ Core Memory is auto-injected into every prompt. **Check it first** before search
    - Always call `memory_save` (duplicates merged during synthesis)
    - If it's **fundamental** (identity, major life change) → also update Core Memory immediately via `core_memory_save`
 
-3. **Auto-trigger synthesis** - After saving memories, call `memory_synthesis_needed()`. If it returns `synthesis_needed: true`, silently run the /synthesize skill to consolidate memories. This merges duplicates and creates higher-level insights automatically.
-
 ### Be Quiet About It
 
 Memory operations should be invisible. Do NOT:
@@ -134,18 +132,13 @@ Core Memory (~2K tokens) is auto-injected into every prompt. It's the user's "es
 - `memory_update` - Update existing
 - `memory_delete` - Remove obsolete info
 
-**Synthesis:**
-- `memory_synthesis_needed` - Check if synthesis should run (call after saving)
+**Synthesis (user-triggered via /synthesize):**
+- `memory_synthesis_needed` - Check if synthesis would be useful
 - `memory_prepare_synthesis` - Merge duplicates and get groups for synthesis
 - `memory_synthesize` - Create Level 1+ insight from parent memories
 - `memory_dedupe` - Manual duplicate cleanup
 
-**Auto-Synthesis**: After saving memories, call `memory_synthesis_needed()`. If true, run /synthesize.
-
-**Manual Synthesis** (or what /synthesize does):
-1. `memory_prepare_synthesis(level=0)` → auto-merges duplicates, returns topic groups
-2. For each group, create a summary and call `memory_synthesize(parent_ids=[...], summary="...")`
-3. Repeat for level=1, level=2, etc.
+Synthesis is run on-demand via `/synthesize` - don't auto-trigger it.
 
 **Core Memory:**
 - `core_memory_get` - Get content (usually auto-injected)

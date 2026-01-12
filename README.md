@@ -75,7 +75,7 @@ Example: Searching "jazz music" finds memories about "Pat Metheny" and "fusion h
 
 ### Synthesis Workflow
 
-When you have 5+ unsynthesized Level 0 memories, Claude automatically runs `/synthesize`:
+Run `/synthesize` to consolidate your memories:
 
 1. **Merge duplicates** - Similar memories at each level are combined
 2. **Group by topic** - Related memories clustered together
