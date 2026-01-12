@@ -62,19 +62,25 @@ When saving a memory (`memory_save`), include:
 
 ### CRITICAL: What goes in full_text
 
-The `full_text` field must contain the **actual conversation excerpt**, not a summary. This is the raw material for future drill-down.
+For **short conversations (~2K tokens or less)**: Store the **actual conversation excerpt verbatim**. This is the raw material for future drill-down.
 
-**WRONG** (this is just another summary):
+**WRONG** (just another summary):
 ```
 full_text: "Discussion about film preferences. Max stated David Lynch is his favorite director."
 ```
 
 **RIGHT** (actual conversation):
 ```
-full_text: "User: David Lynch is probably my favourite movie director of all time. What other movies/directors should I look into?\n\nAssistant: Great taste. Lynch occupies a unique space, but here are directors who share some of his DNA:\n\nSurrealist/Dreamlike Narratives\n- Yorgos Lanthimos - The Lobster, Dogtooth...\n\nUser: Stalker has been on my list for years, I love Tarkovsky\n\nAssistant: Stalker is worth the commitment..."
+full_text: "User: David Lynch is probably my favourite movie director of all time. What other movies/directors should I look into?\n\nAssistant: Great taste. Lynch occupies a unique space...\n\nUser: Stalker has been on my list for years, I love Tarkovsky\n\nAssistant: Stalker is worth the commitment..."
 ```
 
-Include the relevant user messages AND your responses. This preserves context like recommendations given, reasoning discussed, and the full exchange - not just the facts extracted from it.
+For **long conversations (>2K tokens)**: Store a **detailed summary** that preserves:
+- Key quotes from the user (verbatim when possible)
+- Specific recommendations, decisions, or conclusions reached
+- Important context and reasoning discussed
+- Any lists, options, or structured information exchanged
+
+The goal: someone reading full_text later should understand not just *what* was discussed, but *how* the conversation went - the back-and-forth, the specific examples, the nuances.
 
 ## Core Memory
 
