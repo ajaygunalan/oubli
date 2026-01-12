@@ -101,11 +101,13 @@ The install script:
 - Session hooks (UserPromptSubmit for core memory, PreCompact + Stop for auto-save)
 - `/clear-memories` slash command
 - Plugin structure with bundled MCP, commands, hooks
+- Proactive memory behavior (search before responding, save automatically)
 - Instructions for Claude in plugin CLAUDE.md
 - Fractal drill-down retrieval pattern
 
 ### Not Yet Implemented (from SPEC.md)
 - Embeddings for semantic search (currently keyword-only)
+- Easy one-command plugin installation (currently requires git clone + install.sh)
 
 ## Development Commands
 

@@ -15,6 +15,7 @@ A memory system that never forgets. Persistent fractal memory for Claude Code.
 - **Smart Import** - Import your Claude.ai memory export with one command
 - **Auto-Save** - Saves memories at session end and before context compaction
 - **Fractal Synthesis** - Automatically consolidates raw memories into higher-level insights
+- **Proactive Memory** - Claude searches and saves automatically, no prompting needed
 - **Quiet Operation** - Memory operations happen silently in the background
 - **Local-First** - No external services, no API keys, your data stays on your machine
 
