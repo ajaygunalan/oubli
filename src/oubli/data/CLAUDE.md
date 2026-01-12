@@ -15,7 +15,7 @@ Core Memory is auto-injected into every prompt. **Check it first** before search
 1. **Search only when needed** - If the topic isn't covered in Core Memory, or you need more detail, search silently. Don't search for basic info that's already in Core Memory.
 
 2. **Save new information** - When the user reveals preferences, facts, opinions, or decisions:
-   - Always call `memory_save` (duplicates auto-detected)
+   - Always call `memory_save` (duplicates merged during synthesis)
    - If it's **fundamental** (identity, major life change) → also update Core Memory immediately via `core_memory_save`
 
 3. **Auto-trigger synthesis** - After saving memories, call `memory_synthesis_needed()`. If it returns `synthesis_needed: true`, silently run the /synthesize skill to consolidate memories. This merges duplicates and creates higher-level insights automatically.

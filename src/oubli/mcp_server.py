@@ -455,7 +455,7 @@ def memory_synthesize(
 
     new_level = max_parent_level + 1
 
-    # Create synthesized memory (skip dedupe since this is intentional)
+    # Create synthesized memory
     memory_id = store.add(
         summary=summary,
         level=new_level,
@@ -464,7 +464,6 @@ def memory_synthesize(
         keywords=keywords or [],
         source="synthesis",
         parent_ids=parent_ids,
-        dedupe=False,  # Don't dedupe synthesis results
     )
 
     if delete_parents:

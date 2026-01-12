@@ -74,12 +74,11 @@ Both storage AND retrieval are fractal:
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| Storage | LanceDB | Embedded (no server), native FTS search, just files |
-| Search | BM25 FTS | Native LanceDB full-text search on summary column, incremental indexing |
+| Storage | LanceDB | Embedded (no server), hybrid search, just files |
+| Search | Hybrid (BM25 + Vector) | Combines keyword and semantic matching via RRF |
+| Embeddings | sentence-transformers | `all-MiniLM-L6-v2` (384 dims, ~80MB) |
 | Interface | Claude Code Plugin | Hooks + MCP server + slash commands |
 | Language | Python | Ecosystem, ease of install |
-
-**Note:** Embeddings (sentence-transformers) are an optional dependency, not required for basic operation.
 
 ### Directory Structure
 
@@ -89,8 +88,9 @@ oubli/
 │   ├── __init__.py
 │   ├── cli.py                   # Click CLI: setup, uninstall
 │   ├── mcp_server.py            # MCP tools (15 total)
-│   ├── storage.py               # LanceDB interface with deduplication + FTS
-│   └── core_memory.py           # Core Memory file operations
+│   ├── storage.py               # LanceDB storage with hybrid search
+│   ├── embeddings.py            # Sentence-transformers via LanceDB registry
+│   ├── core_memory.py           # Core Memory file operations
 │   └── data/
 │       ├── CLAUDE.md            # Instructions for Claude on using the memory system
 │       └── commands/
@@ -153,7 +153,7 @@ class Memory:
 
 ### Deduplication
 
-On save, memories are automatically deduplicated using Jaccard similarity (85% word overlap threshold). If a very similar memory already exists, the save is skipped and the existing memory ID is returned.
+Deduplication happens during synthesis via `memory_prepare_synthesis`, not on save. This allows raw memories to be captured freely, with duplicates merged only when consolidating into higher-level insights. The merge uses Jaccard similarity (85% word overlap threshold).
 
 ---
 
@@ -238,7 +238,7 @@ pip uninstall oubli
 
 | Tool | Description |
 |------|-------------|
-| `memory_save` | Save a new memory with deduplication (85% Jaccard threshold) |
+| `memory_save` | Save a new memory (auto-embeds for semantic search) |
 | `memory_import` | Bulk import pre-parsed memories |
 
 #### Modification
@@ -410,7 +410,7 @@ All configuration uses sensible defaults. No config file required.
 
 **Synthesis threshold:** 5 unsynthesized L0 memories
 
-**Deduplication threshold:** 0.85 Jaccard similarity
+**Deduplication threshold (synthesis):** 0.85 Jaccard similarity
 
 ---
 
@@ -419,17 +419,13 @@ All configuration uses sensible defaults. No config file required.
 ```toml
 [project]
 name = "oubli"
-version = "0.1.11"
+version = "0.2.1"
 requires-python = ">=3.10"
 dependencies = [
     "mcp>=1.0.0",
     "lancedb>=0.4.0",
     "pyarrow>=14.0.0",
     "click>=8.0.0",
-]
-
-[project.optional-dependencies]
-embeddings = [
     "sentence-transformers>=2.2.0",
 ]
 ```
@@ -438,11 +434,13 @@ embeddings = [
 
 ## Current Implementation Status
 
-### Completed (v0.1.11)
+### Completed (v0.2.2)
 
 - [x] PyPI installation (`pip install oubli && oubli setup`)
-- [x] LanceDB storage with native BM25 full-text search
-- [x] Deduplication on save (Jaccard similarity)
+- [x] **Hybrid search** - BM25 FTS + semantic embeddings (sentence-transformers)
+- [x] LanceDB storage with vector column (384 dims, all-MiniLM-L6-v2)
+- [x] Auto-embedding on save and update
+- [x] Deduplication during synthesis (85% Jaccard similarity)
 - [x] 15 MCP tools including synthesis and fractal drill-down
 - [x] Hooks: UserPromptSubmit (core memory), PreCompact, Stop
 - [x] /clear-memories slash command
@@ -454,7 +452,6 @@ embeddings = [
 
 ### Not Yet Implemented
 
-- [ ] Embeddings for semantic search (optional, using keyword FTS for now)
 - [ ] Web UI for browsing memories
 - [ ] Memory graph visualization
 - [ ] Git-based sync between machines
@@ -464,16 +461,17 @@ embeddings = [
 
 ## Differences from SPEC.md (v1)
 
-| Feature | SPEC v1 | Current Implementation |
+| Feature | SPEC v1 | Current Implementation (v0.2.2) |
 |---------|---------|----------------------|
-| Search | Hybrid (BM25 + embeddings) | BM25 FTS only (embeddings optional) |
+| Search | Hybrid (BM25 + embeddings) | Hybrid (BM25 + sentence-transformers) |
+| Embeddings | sentence-transformers | all-MiniLM-L6-v2 (384 dims) |
 | Subagents | Synthesizer subagent | Inline synthesis via tools |
 | Skills | memory-awareness skill | Proactive behavior in CLAUDE.md |
 | Hooks | SessionStart, Stop | UserPromptSubmit, PreCompact, Stop |
 | Commands | Multiple /oubli:* commands | /clear-memories, /synthesize |
 | Tools | 9 tools | 15 tools |
 | Core Memory updates | After synthesis only | Immediate for fundamental changes + after synthesis |
-| Deduplication | Not specified | Automatic on save (85% Jaccard) |
+| Deduplication | Not specified | During synthesis via `memory_prepare_synthesis` (85% Jaccard) |
 | Installation | Manual plugin setup | PyPI + `oubli setup` |
 
 ---

@@ -10,17 +10,14 @@ A memory system that never forgets. Persistent fractal memory for Claude Code.
 
 ## Features
 
+- **Hybrid Search** - Combines BM25 keyword search + semantic embeddings for intelligent retrieval
 - **Core Memory** - Essential facts about you (~2K tokens), loaded in every conversation
-- **Persistent Storage** - Memories survive across sessions, stored locally in LanceDB
-- **Smart Import** - Import your Claude.ai memory export with one command
-- **Auto-Save** - Saves memories at session end and before context compaction
-- **Auto-Deduplication** - Duplicate memories are automatically detected and merged (85% similarity threshold)
-- **Fractal Synthesis** - Automatically consolidates raw memories into higher-level insights via `/synthesize`
-- **Auto-Synthesis** - Synthesis triggers automatically when unsynthesized memories exceed threshold
+- **Fractal Synthesis** - Raw memories consolidate into higher-level insights automatically
+- **Duplicate Merging** - Similar memories merged during synthesis (85% Jaccard threshold)
 - **Proactive Memory** - Claude searches and saves automatically, no prompting needed
-- **Immediate Core Memory Updates** - Family, work, and identity changes update Core Memory instantly
+- **Immediate Updates** - Family, work, and identity changes update Core Memory instantly
 - **Quiet Operation** - Memory operations happen silently in the background
-- **Local-First** - No external services, no API keys, your data stays on your machine
+- **Local-First** - All data stays on your machine, no external services
 
 ## Installation
 
@@ -29,7 +26,7 @@ pip install oubli
 oubli setup
 ```
 
-Then restart Claude Code.
+Then restart Claude Code. The embedding model (~80MB) downloads on first use.
 
 ### Requirements
 
@@ -43,104 +40,138 @@ oubli uninstall
 pip uninstall oubli
 ```
 
-### What Gets Installed
-
-| Component | Location | Description |
-|-----------|----------|-------------|
-| MCP Server | `claude mcp` | 15 memory tools (save, search, synthesize, etc.) |
-| Hooks | `~/.claude/settings.json` | UserPromptSubmit, PreCompact, Stop |
-| Slash Commands | `~/.claude/commands/` | `/clear-memories`, `/synthesize` |
-| Instructions | `~/.claude/CLAUDE.md` | How Claude should use the memory system |
-| Data | `~/.oubli/` | LanceDB database + Core Memory file |
-
-## Usage
-
-After installation, restart Claude Code. Your Core Memory will be automatically loaded in every conversation.
-
-### Import Existing Memories
-
-Paste your Claude.ai memory export and ask:
-> "Import this into my memory"
-
-Claude will parse it into structured memories and optionally create your Core Memory.
-
-### Natural Interaction
-
-Just talk naturally:
-- "Remember that I prefer TypeScript over JavaScript"
-- "What do you know about my work?"
-- "I no longer work at Spotify, update your memory"
-
-### Slash Commands
-
-- `/clear-memories` - Clear all memories (requires confirmation)
-- `/synthesize` - Run full synthesis workflow: merge duplicates, create insights, update Core Memory
-
 ## How It Works
+
+### Memory Hierarchy
 
 ```
            ┌─────────────────────────────────────────┐
            │            CORE MEMORY                  │
            │    (~2K tokens, always in context)      │
            │                                         │
-           │  The essential "you" - personality,     │
-           │  key preferences, life context, work    │
+           │  Identity, family, work, preferences    │
            └─────────────────────┬───────────────────┘
-                                 │ (distilled from)
+                                 │ synthesized from
                                  ▼
-Level 1+   ○ "Deeply appreciates jazz guitar, especially fusion"
-(insights)  ╱╲
-           ╱  ╲
-Level 0   ○ ○ ○ ○  Raw memories from conversations
-(raw)
+Level 2    ○ "Deeply technical, values efficiency"
+            ╲
+Level 1    ○ ○ "Loves jazz fusion"  "Python expert"
+            ╲│
+Level 0    ○○○○ Raw memories with full conversation text
 ```
 
-- **Core Memory**: Always loaded, contains the most important stable facts
-- **Level 0**: Raw memories from conversations with full context
-- **Level 1+**: Synthesized insights from multiple raw memories
+- **Core Memory**: Always loaded. The essential "you" - identity, family, work, key preferences.
+- **Level 0**: Raw memories from conversations with full context.
+- **Level 1+**: Synthesized insights combining multiple raw memories.
+
+### Hybrid Search
+
+Oubli uses LanceDB's hybrid search combining:
+- **BM25 Full-Text Search** - Finds keyword matches
+- **Semantic Embeddings** - Finds conceptually related content (via sentence-transformers)
+- **RRF Reranking** - Merges both result sets intelligently
+
+Example: Searching "jazz music" finds memories about "Pat Metheny" and "fusion harmonies" even without exact keyword matches.
+
+### Synthesis Workflow
+
+When you have 5+ unsynthesized Level 0 memories, Claude automatically runs `/synthesize`:
+
+1. **Merge duplicates** - Similar memories at each level are combined
+2. **Group by topic** - Related memories clustered together
+3. **Create insights** - Level 1+ memories synthesize the patterns
+4. **Update Core Memory** - Regenerated from highest-level insights
+
+Nothing is lost - you can always drill down from a synthesis to its source memories.
+
+## Usage
+
+### Natural Interaction
+
+Just talk naturally. Claude handles memory operations silently:
+- "I prefer TypeScript over JavaScript" → Saved automatically
+- "What do you know about my work?" → Searches memory
+- "I no longer work at Spotify" → Deletes old, saves new, updates Core Memory
+
+### Import Existing Memories
+
+Paste your Claude.ai memory export and ask:
+> "Import this into my memory"
+
+Claude parses it into structured memories and optionally creates your Core Memory.
+
+### Slash Commands
+
+- `/synthesize` - Run full synthesis: merge duplicates, create insights, update Core Memory
+- `/clear-memories` - Clear all memories (requires confirmation)
 
 ## Data Storage
 
-All data is stored locally in `~/.oubli/`:
-- `memories.lance/` - LanceDB database
-- `core_memory.md` - Your Core Memory (human-readable, editable)
+All data stored locally in `~/.oubli/`:
+
+| File | Description |
+|------|-------------|
+| `memories.lance/` | LanceDB database with vector embeddings |
+| `core_memory.md` | Your Core Memory (human-readable, editable) |
+
+## What Gets Installed
+
+| Component | Location | Description |
+|-----------|----------|-------------|
+| MCP Server | `claude mcp` | 15 memory tools |
+| Hooks | `~/.claude/settings.json` | UserPromptSubmit, PreCompact, Stop |
+| Commands | `~/.claude/commands/` | `/clear-memories`, `/synthesize` |
+| Instructions | `~/.claude/CLAUDE.md` | How Claude uses the memory system |
 
 ## MCP Tools
 
-Oubli provides 15 MCP tools for memory operations:
-
+### Retrieval
 | Tool | Description |
 |------|-------------|
-| `memory_save` | Save a new memory (auto-deduplicates) |
-| `memory_search` | Search memories by BM25 full-text search |
+| `memory_search` | Hybrid search (BM25 + semantic) |
 | `memory_get` | Get full details including conversation text |
 | `memory_get_parents` | Drill down from synthesis to source memories |
 | `memory_list` | List memories by level |
 | `memory_stats` | Get memory statistics |
+
+### Storage
+| Tool | Description |
+|------|-------------|
+| `memory_save` | Save a new memory (auto-embeds) |
+| `memory_import` | Bulk import memories |
 | `memory_update` | Update an existing memory |
 | `memory_delete` | Delete a memory |
-| `memory_import` | Bulk import memories |
-| `memory_synthesis_needed` | Check if synthesis should run |
-| `memory_prepare_synthesis` | Merge duplicates and get groups for synthesis |
-| `memory_synthesize` | Create Level 1+ insight from raw memories |
+
+### Synthesis
+| Tool | Description |
+|------|-------------|
+| `memory_synthesis_needed` | Check if synthesis should run (threshold: 5) |
+| `memory_prepare_synthesis` | Merge duplicates, return groups for synthesis |
+| `memory_synthesize` | Create Level 1+ insight from parent memories |
 | `memory_dedupe` | Manual duplicate cleanup |
+
+### Core Memory
+| Tool | Description |
+|------|-------------|
 | `core_memory_get` | Get Core Memory content |
 | `core_memory_save` | Save Core Memory content |
 
 ## Development
 
 ```bash
-# Clone and install in development mode
 git clone https://github.com/dremok/oubli.git
 cd oubli
 pip install -e .
 oubli setup
 
-# Run tests
-python -c "from oubli.storage import MemoryStore; store = MemoryStore(); print(store.get_stats())"
-
-# Check MCP tools
-python -c "from oubli.mcp_server import mcp; print([t.name for t in mcp._tool_manager._tools.values()])"
+# Test storage
+python -c "
+from oubli.storage import MemoryStore
+store = MemoryStore()
+print('Embeddings:', store.embeddings_enabled())
+store.add(summary='Test memory', topics=['test'])
+print(store.search('test'))
+"
 ```
 
 ## License

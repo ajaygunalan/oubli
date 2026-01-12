@@ -14,7 +14,8 @@ A Claude Code plugin that provides persistent, hierarchical memory with fractal 
 
 ## Architecture Decisions
 
-- **LanceDB from the start** - Embedded vector database, avoids JSON→LanceDB migration pain later
+- **LanceDB with hybrid search** - Embedded vector database with BM25 FTS + semantic embeddings
+- **sentence-transformers by default** - `all-MiniLM-L6-v2` for semantic search (~80MB, downloads on first use)
 - **MCP tools are simple CRUD** - Claude Code does the intelligent work (parsing, clustering, summarizing)
 - **Slash command for destructive ops** - `/clear-memories` requires explicit user invocation
 - **Core Memory is a markdown file** - `~/.oubli/core_memory.md`, human-readable and editable
@@ -45,7 +46,8 @@ src/oubli/
 ├── __init__.py
 ├── cli.py              # CLI with setup/uninstall commands
 ├── mcp_server.py       # MCP tools for Claude Code (15 tools)
-├── storage.py          # LanceDB-backed memory storage with FTS + deduplication
+├── storage.py          # LanceDB storage with hybrid search
+├── embeddings.py       # Sentence-transformers integration via LanceDB registry
 ├── core_memory.py      # Core memory file operations
 └── data/
     ├── CLAUDE.md       # Instructions installed to ~/.claude/
@@ -56,7 +58,8 @@ src/oubli/
 
 ## Key Files
 
-- `src/oubli/storage.py` - LanceDB-backed MemoryStore with Memory dataclass, FTS search, deduplication
+- `src/oubli/storage.py` - LanceDB-backed MemoryStore with hybrid search (BM25 + vector)
+- `src/oubli/embeddings.py` - Sentence-transformers embeddings via LanceDB registry
 - `src/oubli/core_memory.py` - Core memory file operations
 - `src/oubli/mcp_server.py` - MCP tools for Claude Code integration (15 tools)
 - `src/oubli/cli.py` - CLI with setup/uninstall commands and hook support
@@ -66,22 +69,22 @@ src/oubli/
 ## MCP Tools (15 total)
 
 ### Retrieval (Fractal Drill-Down)
-- `memory_search` - BM25 FTS search on summaries, prefers higher levels
+- `memory_search` - Hybrid search (BM25 + semantic embeddings), prefers higher levels
 - `memory_get_parents` - Get parent memory summaries for drill-down
 - `memory_get` - Get full details INCLUDING full_text (final drill-down)
 - `memory_list` - List memories by level (summaries only)
 - `memory_stats` - Get statistics
 
 ### Storage
-- `memory_save` - Save a new memory with auto-deduplication (85% Jaccard threshold)
+- `memory_save` - Save with auto-embedding
 - `memory_import` - Bulk import pre-parsed memories
 
 ### Modification
-- `memory_update` - Update an existing memory
+- `memory_update` - Update an existing memory (re-embeds if summary changed)
 - `memory_delete` - Delete a memory (for obsolete info)
 
 ### Synthesis
-- `memory_synthesis_needed` - Check if synthesis should run (threshold-based)
+- `memory_synthesis_needed` - Check if synthesis should run (threshold: 5)
 - `memory_prepare_synthesis` - Merge duplicates at level, return groups for synthesis
 - `memory_synthesize` - Create Level 1+ insight from parent memories
 - `memory_dedupe` - Manual duplicate cleanup with dry-run option
@@ -101,13 +104,14 @@ src/oubli/
 - **PreCompact** - Saves memories before context compaction (prevents losing info in long sessions)
 - **Stop** - Saves memories at session end
 
-## Current Status (v0.1.11)
+## Current Status (v0.2.2)
 
 ### Completed
 - PyPI installation (`pip install oubli && oubli setup`)
-- Storage foundation with LanceDB
-- Native BM25 full-text search on summary column (incremental indexing)
-- Auto-deduplication on save (85% Jaccard similarity threshold)
+- **Hybrid search** - BM25 FTS + semantic embeddings (sentence-transformers)
+- LanceDB storage with vector column (384 dims, all-MiniLM-L6-v2)
+- Auto-embedding on save and update
+- Deduplication during synthesis via `memory_prepare_synthesis` (85% Jaccard threshold)
 - Memory dataclass with all fields
 - CRUD operations (add, get, search, update, delete)
 - Core memory file operations
@@ -122,9 +126,9 @@ src/oubli/
 - Fractal drill-down retrieval pattern
 
 ### Not Yet Implemented
-- Embeddings for semantic search (using BM25 FTS for now)
 - Web UI for browsing memories
 - Memory graph visualization
+- Git-based sync between machines
 
 ## Development Commands
 
