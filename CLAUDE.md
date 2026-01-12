@@ -55,17 +55,26 @@ The install script:
 - `src/oubli/cli.py` - CLI commands for hooks (inject-context, session-start)
 - `SPEC.md` - Full specification document (source of truth for features)
 
-## MCP Tools (10 total)
+## MCP Tools (13 total)
 
-### Memory Operations
-- `memory_save` - Save a new memory
-- `memory_search` - Search by keyword
-- `memory_get` - Get full memory details
-- `memory_list` - List all memories
+### Retrieval (Fractal Drill-Down)
+- `memory_search` - Search summaries, prefers higher levels, returns parent_ids
+- `memory_get_parents` - Get parent memory summaries for drill-down
+- `memory_get` - Get full details INCLUDING full_text (final drill-down)
+- `memory_list` - List memories by level (summaries only)
 - `memory_stats` - Get statistics
-- `memory_update` - Update a memory
-- `memory_delete` - Delete a memory (for obsolete info)
+
+### Storage
+- `memory_save` - Save a new memory with summary + full_text
 - `memory_import` - Bulk import pre-parsed memories
+
+### Modification
+- `memory_update` - Update an existing memory
+- `memory_delete` - Delete a memory (for obsolete info)
+
+### Synthesis
+- `memory_get_synthesis_candidates` - Find topics ready for synthesis
+- `memory_synthesize` - Create Level 1+ insight from parent memories
 
 ### Core Memory
 - `core_memory_get` - Get core memory content
@@ -87,17 +96,15 @@ The install script:
 - Memory dataclass with all fields
 - CRUD operations (add, get, search, update, delete)
 - Core memory file operations
-- MCP server with 10 tools
+- MCP server with 13 tools (including synthesis and fractal drill-down)
 - Session hooks (UserPromptSubmit for core memory, Stop for auto-save)
 - `/clear-memories` slash command
 - Plugin structure with bundled MCP, commands, hooks
 - Instructions for Claude in plugin CLAUDE.md
+- Fractal drill-down retrieval pattern
 
 ### Not Yet Implemented (from SPEC.md)
-- `memory_synthesize` tool - Trigger clustering and synthesis
 - Embeddings for semantic search (currently keyword-only)
-- Synthesizer subagent
-- Memory awareness skill
 
 ## Development Commands
 

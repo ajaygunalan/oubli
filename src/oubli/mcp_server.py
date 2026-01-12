@@ -42,16 +42,21 @@ def memory_save(
     source: str = "conversation",
     parent_ids: list[str] = None,
 ) -> dict:
-    """Save a new memory to the store.
+    """Save a new Level 0 memory from the current conversation.
+
+    IMPORTANT: Include full_text with enough context for future drill-down.
+    This is what gets retrieved when Claude needs complete details later.
+    Include relevant conversation turns; summarize tool outputs rather than
+    including raw JSON.
 
     Args:
-        summary: Brief summary of the memory (required).
-        level: Memory level - 0 for raw, 1+ for synthesized insights.
-        full_text: Full text content of the memory.
-        topics: List of topic tags.
-        keywords: List of keywords for search.
-        source: Source of memory - "conversation", "import", or "synthesis".
-        parent_ids: IDs of parent memories (for synthesized memories).
+        summary: Brief 1-2 sentence summary (required). Used in search results.
+        level: Memory level - 0 for raw (default), 1+ for synthesized.
+        full_text: Complete conversation context for this memory.
+        topics: Lowercase topic tags for grouping (e.g., ["work", "python"]).
+        keywords: Specific searchable terms.
+        source: Source - "conversation" (default), "import", or "synthesis".
+        parent_ids: IDs of parent memories (only for synthesized memories).
 
     Returns:
         Dict with the new memory's ID.
@@ -74,22 +79,33 @@ def memory_search(
     query: str,
     limit: int = 5,
     min_level: int = 0,
+    prefer_higher_level: bool = True,
 ) -> list[dict]:
-    """Search memories by keyword matching.
+    """Search memories by keyword matching. Returns summaries only (no full_text).
+
+    FRACTAL RETRIEVAL: Start with higher-level memories (synthesized insights),
+    then drill down to lower levels only if you need more detail. Use parent_ids
+    to find the source memories that were synthesized into an insight.
 
     Args:
         query: Search query string.
         limit: Maximum number of results to return.
         min_level: Minimum memory level to include.
+        prefer_higher_level: If True, sort results by level descending (default).
 
     Returns:
-        List of matching memories with id, summary, level, topics.
+        List of matching memories with id, summary, level, topics, parent_ids.
+        Does NOT include full_text - use memory_get to drill down when needed.
     """
     store = get_store()
-    results = store.search(query, limit=limit * 2)  # Get extra to filter
+    results = store.search(query, limit=limit * 3)  # Get extra for filtering/sorting
 
     # Filter by min_level
-    filtered = [m for m in results if m.level >= min_level][:limit]
+    filtered = [m for m in results if m.level >= min_level]
+
+    # Sort by level (higher first) if preferred
+    if prefer_higher_level:
+        filtered.sort(key=lambda m: m.level, reverse=True)
 
     return [
         {
@@ -98,20 +114,25 @@ def memory_search(
             "level": m.level,
             "topics": m.topics,
             "source": m.source,
+            "parent_ids": m.parent_ids,  # For drill-down to source memories
         }
-        for m in filtered
+        for m in filtered[:limit]
     ]
 
 
 @mcp.tool()
 def memory_get(memory_id: str) -> dict:
-    """Get full details of a specific memory by ID.
+    """Get full details of a specific memory, INCLUDING full_text.
+
+    DRILL-DOWN: Use this when you need the complete conversation text stored
+    in a Level 0 memory. For Level 1+ memories, full_text is empty - use
+    parent_ids to drill down to the source memories.
 
     Args:
         memory_id: The UUID of the memory to retrieve.
 
     Returns:
-        Full memory details or error if not found.
+        Full memory details including full_text, parent_ids, child_ids.
     """
     store = get_store()
     memory = store.get(memory_id)
@@ -135,18 +156,59 @@ def memory_get(memory_id: str) -> dict:
 
 
 @mcp.tool()
+def memory_get_parents(memory_id: str) -> list[dict]:
+    """Get summaries of parent memories (for drilling DOWN from a synthesis).
+
+    FRACTAL DRILL-DOWN: When a Level 1+ synthesized memory doesn't have enough
+    detail, use this to get the summaries of its source memories. If you still
+    need more detail, use memory_get on a specific parent to get its full_text.
+
+    Args:
+        memory_id: The UUID of the synthesized memory.
+
+    Returns:
+        List of parent memory summaries (no full_text).
+    """
+    store = get_store()
+    memory = store.get(memory_id)
+
+    if memory is None:
+        return {"error": f"Memory {memory_id} not found"}
+
+    parents = []
+    for pid in memory.parent_ids:
+        parent = store.get(pid)
+        if parent:
+            parents.append({
+                "id": parent.id,
+                "summary": parent.summary,
+                "level": parent.level,
+                "topics": parent.topics,
+                "parent_ids": parent.parent_ids,  # For further drill-down
+            })
+
+    return parents
+
+
+@mcp.tool()
 def memory_list(
     level: int = None,
     limit: int = 50,
 ) -> list[dict]:
-    """List memories, optionally filtered by level.
+    """List memories, optionally filtered by level. Returns summaries only.
+
+    Use this to browse the memory hierarchy:
+    - level=1 to see synthesized insights
+    - level=0 to see raw memories
+    - No level filter to see everything
 
     Args:
         level: If provided, only return memories at this level.
         limit: Maximum number of memories to return.
 
     Returns:
-        List of memories with id, summary, level, topics.
+        List of memories with id, summary, level, topics, parent_ids.
+        Does NOT include full_text - use memory_get for that.
     """
     store = get_store()
 
@@ -162,6 +224,7 @@ def memory_list(
             "level": m.level,
             "topics": m.topics,
             "source": m.source,
+            "parent_ids": m.parent_ids,
         }
         for m in memories
     ]
@@ -309,6 +372,128 @@ def memory_import(
         "status": "imported",
         "count": len(imported_ids),
         "ids": imported_ids,
+    }
+
+
+# ============================================================================
+# Synthesis Tools
+# ============================================================================
+
+@mcp.tool()
+def memory_synthesize(
+    parent_ids: list[str],
+    summary: str,
+    topics: list[str] = None,
+    keywords: list[str] = None,
+) -> dict:
+    """Create a synthesized memory from multiple parent memories.
+
+    This creates a Level 1+ memory that abstracts/combines insights from
+    lower-level memories. Claude should:
+    1. Review related memories (e.g., all music-related ones)
+    2. Identify patterns or themes worth abstracting
+    3. Create a synthesized insight using this tool
+    4. The parent memories are linked via parent_ids
+
+    Example: 5 memories about jazz guitarists → "User has deep appreciation
+    for jazz guitar, especially fusion players"
+
+    Args:
+        parent_ids: IDs of the memories being synthesized (required).
+        summary: The synthesized insight (1-3 sentences).
+        topics: Topic tags for the synthesis.
+        keywords: Keywords for search.
+
+    Returns:
+        Dict with the new synthesized memory's ID.
+    """
+    store = get_store()
+
+    if not parent_ids:
+        return {"error": "parent_ids required - must specify which memories to synthesize"}
+
+    # Determine level (max parent level + 1)
+    max_parent_level = 0
+    for pid in parent_ids:
+        parent = store.get(pid)
+        if parent:
+            max_parent_level = max(max_parent_level, parent.level)
+
+    new_level = max_parent_level + 1
+
+    # Create synthesized memory
+    memory_id = store.add(
+        summary=summary,
+        level=new_level,
+        full_text="",  # Synthesized memories don't have full_text
+        topics=topics or [],
+        keywords=keywords or [],
+        source="synthesis",
+        parent_ids=parent_ids,
+    )
+
+    # Update parent memories to link to this child
+    for pid in parent_ids:
+        parent = store.get(pid)
+        if parent:
+            new_child_ids = parent.child_ids + [memory_id]
+            store.update(pid, child_ids=new_child_ids)
+
+    return {
+        "status": "synthesized",
+        "id": memory_id,
+        "level": new_level,
+        "parent_count": len(parent_ids),
+    }
+
+
+@mcp.tool()
+def memory_get_synthesis_candidates(
+    topic: str = None,
+    min_count: int = 3,
+) -> dict:
+    """Get Level 0 memories that could be candidates for synthesis.
+
+    Returns memories grouped by topic to help identify synthesis opportunities.
+    Claude can review these and decide which groups should be synthesized.
+
+    Args:
+        topic: Optional topic to filter by. If not provided, returns all topics.
+        min_count: Minimum memories in a topic to be considered (default: 3).
+
+    Returns:
+        Dict with topics and their candidate memories.
+    """
+    store = get_store()
+    memories = store.get_by_level(0, limit=500)
+
+    # Group by topic
+    by_topic: dict[str, list] = {}
+    for m in memories:
+        # Skip if already synthesized (has children)
+        if m.child_ids:
+            continue
+
+        for t in m.topics:
+            if topic and t != topic:
+                continue
+            if t not in by_topic:
+                by_topic[t] = []
+            by_topic[t].append({
+                "id": m.id,
+                "summary": m.summary,
+                "keywords": m.keywords,
+            })
+
+    # Filter by min_count
+    candidates = {
+        t: mems for t, mems in by_topic.items()
+        if len(mems) >= min_count
+    }
+
+    return {
+        "topics_with_candidates": len(candidates),
+        "candidates": candidates,
     }
 
 
