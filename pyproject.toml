@@ -23,26 +23,20 @@ dependencies = [
     "mcp>=1.0.0",
     "lancedb>=0.4.0",
     "pyarrow>=14.0.0",
+    "click>=8.0.0",
 ]
 
 [project.optional-dependencies]
-cli = [
-    "click>=8.0.0",
-    "rich>=13.0.0",
-]
 embeddings = [
     "sentence-transformers>=2.2.0",
-]
-all = [
-    "oubli[cli,embeddings]",
 ]
 
 [project.scripts]
 oubli = "oubli.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/maxleander/oubli"
-Repository = "https://github.com/maxleander/oubli"
+Homepage = "https://github.com/dremok/oubli"
+Repository = "https://github.com/dremok/oubli"
 
 [build-system]
 requires = ["hatchling"]
@@ -50,3 +44,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/oubli"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
+[tool.hatch.build]
+include = [
+    "src/oubli/**/*.py",
+    "src/oubli/data/**/*",
+]

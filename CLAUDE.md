@@ -23,30 +23,34 @@ A Claude Code plugin that provides persistent, hierarchical memory with fractal 
 ## Installation
 
 ```bash
-# Clone and install
-git clone https://github.com/dremok/oubli.git
-cd oubli
-./install.sh
+pip install oubli
+oubli setup
 ```
 
-The install script installs:
-1. **Virtual environment** - `.venv/` with dependencies
-2. **MCP server** - Registered via `claude mcp add`
-3. **Hooks** - Written to `~/.claude/settings.json`
-4. **Slash command** - `/clear-memories` copied to `~/.claude/commands/`
-5. **CLAUDE.md** - Instructions copied to `~/.claude/CLAUDE.md`
-6. **Data directory** - `~/.oubli/` created
+Then restart Claude Code.
 
-## Plugin Structure
+The setup command installs:
+1. **MCP server** - Registered via `claude mcp add`
+2. **Hooks** - Written to `~/.claude/settings.json`
+3. **Slash command** - `/clear-memories` copied to `~/.claude/commands/`
+4. **CLAUDE.md** - Instructions copied to `~/.claude/CLAUDE.md`
+5. **Data directory** - `~/.oubli/` created
+
+To uninstall: `oubli uninstall && pip uninstall oubli`
+
+## Package Structure
 
 ```
-.claude-plugin/
-├── plugin.json          # Plugin manifest (MCP server, commands, hooks)
-├── CLAUDE.md            # Instructions for Claude on using the memory system
-├── commands/
-│   └── clear-memories.md  # /clear-memories slash command
-└── hooks/
-    └── hooks.json       # UserPromptSubmit, PreCompact, Stop hooks
+src/oubli/
+├── __init__.py
+├── cli.py              # CLI with setup/uninstall commands
+├── mcp_server.py       # MCP tools for Claude Code
+├── storage.py          # LanceDB-backed memory storage
+├── core_memory.py      # Core memory file operations
+└── data/
+    ├── CLAUDE.md       # Instructions installed to ~/.claude/
+    └── commands/
+        └── clear-memories.md  # /clear-memories slash command
 ```
 
 ## Key Files
@@ -54,7 +58,7 @@ The install script installs:
 - `src/oubli/storage.py` - LanceDB-backed MemoryStore with Memory dataclass
 - `src/oubli/core_memory.py` - Core memory file operations
 - `src/oubli/mcp_server.py` - MCP tools for Claude Code integration
-- `src/oubli/cli.py` - CLI commands for hooks (inject-context, session-start)
+- `src/oubli/cli.py` - CLI with setup/uninstall commands and hook support
 - `SPEC.md` - Full specification document (source of truth for features)
 
 ## MCP Tools (13 total)
@@ -109,28 +113,28 @@ The install script installs:
 
 ### Not Yet Implemented (from SPEC.md)
 - Embeddings for semantic search (currently keyword-only)
-- Easy one-command plugin installation (currently requires git clone + install.sh)
 
 ## Development Commands
 
 ```bash
-# Activate virtual environment
-source .venv/bin/activate
+# Install in development mode
+git clone https://github.com/dremok/oubli.git
+cd oubli
+pip install -e .
+oubli setup
 
 # Run tests
 python -c "from oubli.storage import MemoryStore; store = MemoryStore(); print(store.get_stats())"
 
 # Test CLI
-python -m oubli.cli inject-context
+oubli --help
+oubli inject-context
 
 # Reset data
 rm -rf ~/.oubli/
 
 # Check MCP server loads
 python -c "from oubli.mcp_server import mcp; print([t.name for t in mcp._tool_manager._tools.values()])"
-
-# Test plugin locally
-claude --plugin-dir /Users/maxleander/code/oubli/.claude-plugin
 ```
 
 ## Data Storage

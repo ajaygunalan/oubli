@@ -22,14 +22,23 @@ A memory system that never forgets. Persistent fractal memory for Claude Code.
 ## Installation
 
 ```bash
-git clone https://github.com/dremok/oubli.git
-cd oubli
-./install.sh
+pip install oubli
+oubli setup
 ```
 
-Requirements:
+Then restart Claude Code.
+
+### Requirements
+
+- Python 3.10+
 - [Claude Code](https://claude.ai/code) CLI installed
-- [uv](https://astral.sh/uv) for Python environment management
+
+### Uninstall
+
+```bash
+oubli uninstall
+pip uninstall oubli
+```
 
 ### What Gets Installed
 
@@ -115,8 +124,11 @@ Oubli provides 13 MCP tools for memory operations:
 ## Development
 
 ```bash
-# Activate virtual environment
-source .venv/bin/activate
+# Clone and install in development mode
+git clone https://github.com/dremok/oubli.git
+cd oubli
+pip install -e .
+oubli setup
 
 # Run tests
 python -c "from oubli.storage import MemoryStore; store = MemoryStore(); print(store.get_stats())"
