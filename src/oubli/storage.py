@@ -199,29 +199,37 @@ class MemoryStore:
     def search(self, query: str, limit: int = 10) -> list[Memory]:
         """Search memories by keyword matching in summary and full_text.
 
+        Tokenizes query and scores based on word matches.
         For now, uses simple string matching. Vector search added when embeddings available.
         """
-        # LanceDB full-text search on summary
         all_memories = self.get_all(limit=1000)
 
-        query_lower = query.lower()
+        # Tokenize query into words (alphanumeric, lowercase)
+        query_words = [w.lower() for w in query.split() if len(w) >= 2]
+        if not query_words:
+            return []
+
         matches = []
         for m in all_memories:
             score = 0
-            # Check summary
-            if query_lower in m.summary.lower():
-                score += 2
-            # Check full_text
-            if m.full_text and query_lower in m.full_text.lower():
-                score += 1
-            # Check keywords
-            for kw in m.keywords:
-                if query_lower in kw.lower():
+            summary_lower = m.summary.lower()
+            full_text_lower = m.full_text.lower() if m.full_text else ""
+
+            for word in query_words:
+                # Check summary (higher weight)
+                if word in summary_lower:
+                    score += 2
+                # Check full_text
+                if word in full_text_lower:
                     score += 1
-            # Check topics
-            for topic in m.topics:
-                if query_lower in topic.lower():
-                    score += 1
+                # Check keywords
+                for kw in m.keywords:
+                    if word in kw.lower():
+                        score += 1
+                # Check topics
+                for topic in m.topics:
+                    if word in topic.lower():
+                        score += 1
 
             if score > 0:
                 matches.append((score, m))
