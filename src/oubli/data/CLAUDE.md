@@ -33,21 +33,36 @@ Core Memory (~2K tokens) is auto-injected into every prompt. **Check it first**:
 
 ## Proactive Behavior
 
-### Search automatically when:
-- **Names appear** that aren't in Core Memory (people, companies, projects)
-- **References to past events**: "remember when", "last time", "we talked about"
-- **Decisions where history matters**: advice, recommendations, choices
-- **Follow-ups**: topics that might have prior context
-- **Corrections**: user says "actually..." or "that's not quite right" - search to understand what you missed
+**Two modes based on what the user says:**
 
-**Search BEFORE responding** - don't wait until you've already given wrong or incomplete information.
+### User STATES FACTS → SAVE
+When the user tells you something (not asking), save it:
+- "Karla is a pescetarian" → `memory_save` immediately
+- "I started using Neovim" → `memory_save`
+- "We moved to a new house" → `memory_save` (and maybe update Core Memory)
 
-### Save automatically when the user reveals:
+Save each distinct fact as a separate memory. Multiple facts = multiple saves.
+
+### User ASKS or NEEDS HELP → SEARCH first
+When the user asks a question or wants help, search for context:
+- "What should I cook for dinner?" → search for dietary preferences, past meals
+- "Help me plan Karla's birthday" → search for Karla, past birthdays
+- "What was that restaurant?" → search for restaurants
+
+**Search BEFORE responding** - don't give incomplete answers when memories exist.
+
+### Search triggers (when asking/helping):
+- **Names** not fully described in Core Memory
+- **References to past**: "remember when", "last time", "we discussed"
+- **Decisions** where history matters
+- **Follow-ups** on previous topics
+
+### Save triggers (when user states facts):
 - **Preferences**: "I like X", "I prefer Y"
-- **Personal facts**: Work, family, location
+- **Personal facts**: Work, family, diet, location
 - **Opinions**: Strong views on topics
-- **Decisions**: Choices made during conversations
-- **Interests**: Topics they engage with enthusiastically
+- **Decisions**: Choices made
+- **New info about known people**: dietary restrictions, preferences, relationships
 
 ### Update Core Memory immediately for fundamental changes:
 - **Family info**: "My father is Anders", "I have a sister"
