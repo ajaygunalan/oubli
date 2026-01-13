@@ -4,6 +4,17 @@
 
 A Claude Code plugin that provides persistent, hierarchical memory with fractal synthesis.
 
+## Crucial Memory Rule
+
+**CRUCIAL information must be stored in BOTH Oubli AND this CLAUDE.md file.**
+
+Oubli memories require a search to find. CLAUDE.md is always loaded. For operational info that must never be forgotten (credential locations, publishing workflows, key file paths), put it here so it's always available.
+
+Examples of crucial info:
+- Credential/token locations (like PyPI token at `~/.config/pypi/token`)
+- Publishing and deployment workflows
+- Project-specific operational commands
+
 ## Working Style Preferences
 
 - **Rapid prototyping** - Get working features fast, avoid over-engineering upfront
@@ -179,11 +190,11 @@ When the user asks to publish a new version:
 
 1. **Bump version** in `pyproject.toml` (use semver: patch for fixes, minor for features, major for breaking)
 2. **Build**: `rm -rf dist/ && python -m build`
-3. **Ask user for PyPI token** - just say: "I need your PyPI token to publish"
-4. **Publish**:
+3. **Publish** (token stored at `~/.config/pypi/token`):
    ```bash
-   TWINE_USERNAME=__token__ TWINE_PASSWORD="<token>" python -m twine upload dist/*
+   TWINE_USERNAME=__token__ TWINE_PASSWORD=$(cat ~/.config/pypi/token) python -m twine upload dist/*
    ```
+4. **Push** to GitHub: `git push`
 5. **Confirm** with PyPI URL: `https://pypi.org/project/oubli/<version>/`
 
 User can then upgrade in other projects: `pip install --upgrade oubli`

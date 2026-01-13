@@ -2,6 +2,12 @@
 
 You have access to a persistent **fractal memory system**. Use it proactively - don't wait to be asked.
 
+## Crucial Memory Rule
+
+**CRUCIAL information must be stored in BOTH Oubli AND CLAUDE.md.**
+
+Oubli memories require a search to find. CLAUDE.md is always loaded. For operational info that must never be forgotten (credential locations, publishing workflows, key paths), store it in the project's CLAUDE.md so it's always available.
+
 ## Key Concept: Fractal in Both Directions
 
 ```
