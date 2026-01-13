@@ -27,6 +27,15 @@ Core Memory (~2K tokens) is auto-injected into every prompt. **Check it first**:
 
 ## Proactive Behavior
 
+### Search automatically when:
+- **Names appear** that aren't in Core Memory (people, companies, projects)
+- **References to past events**: "remember when", "last time", "we talked about"
+- **Decisions where history matters**: advice, recommendations, choices
+- **Follow-ups**: topics that might have prior context
+- **Corrections**: user says "actually..." or "that's not quite right" - search to understand what you missed
+
+**Search BEFORE responding** - don't wait until you've already given wrong or incomplete information.
+
 ### Save automatically when the user reveals:
 - **Preferences**: "I like X", "I prefer Y"
 - **Personal facts**: Work, family, location
