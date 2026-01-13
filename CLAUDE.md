@@ -29,40 +29,32 @@ Examples of crucial info:
 - **sentence-transformers by default** - `all-MiniLM-L6-v2` for semantic search (~80MB, downloads on first use)
 - **MCP tools are simple CRUD** - Claude Code does the intelligent work (parsing, clustering, summarizing)
 - **Slash command for destructive ops** - `/clear-memories` requires explicit user invocation
-- **Core Memory is a markdown file** - `.oubli/core_memory.md`, human-readable and editable
+- **Core Memory is a markdown file** - `~/.oubli/core_memory.md`, human-readable and editable
 - **Everything runs locally** - No external services, no API keys needed
-- **Project-local by default** - Each project has isolated installation and memories
+- **Config local, data global** - Config installed per-project, memories shared across all projects
 
 ## Installation
 
 ```bash
 pip install oubli
 cd /path/to/project
-oubli setup           # Local install (default)
-oubli setup --global  # Global install (optional)
+oubli setup
 ```
 
 Then restart Claude Code.
 
-### Local Installation (Default)
+### What Gets Installed
 
-Everything in the project directory:
+**Per-project (local):**
 - `.mcp.json` - MCP server registration
 - `.claude/settings.local.json` - Hooks
 - `.claude/commands/` - Slash commands
 - `.claude/CLAUDE.md` - Instructions
-- `.oubli/` - Data directory
 
-### Global Installation (`--global`)
+**Shared (global):**
+- `~/.oubli/` - Data directory (memories + core memory)
 
-Everything shared across projects:
-- MCP server via `claude mcp add`
-- `~/.claude/settings.json` - Hooks
-- `~/.claude/commands/` - Slash commands
-- `~/.claude/CLAUDE.md` - Instructions
-- `~/.oubli/` - Data directory
-
-To uninstall: `oubli uninstall` (or `oubli uninstall --global`) then `pip uninstall oubli`
+To uninstall: `oubli uninstall` then `pip uninstall oubli`
 
 ## Package Structure
 
@@ -70,7 +62,7 @@ To uninstall: `oubli uninstall` (or `oubli uninstall --global`) then `pip uninst
 src/oubli/
 ├── __init__.py
 ├── cli.py              # CLI with setup/uninstall commands
-├── config.py           # Data directory resolution (local vs global)
+├── config.py           # Data directory resolution (always ~/.oubli/)
 ├── mcp_server.py       # MCP tools for Claude Code (15 tools)
 ├── storage.py          # LanceDB storage with hybrid search
 ├── embeddings.py       # Sentence-transformers integration via LanceDB registry
@@ -132,7 +124,7 @@ src/oubli/
 - **PreCompact** - Saves memories before context compaction (prevents losing info in long sessions)
 - **Stop** - Saves memories at session end
 
-## Current Status (v0.2.3)
+## Current Status (v0.4.6)
 
 ### Completed
 - PyPI installation (`pip install oubli && oubli setup`)
@@ -152,10 +144,11 @@ src/oubli/
 - Immediate Core Memory updates for fundamental changes (family, work, identity)
 - Instructions for Claude in `src/oubli/data/CLAUDE.md`
 - Fractal drill-down retrieval pattern
+- **Memory graph visualization** (`oubli viz` / `/visualize-memory`)
+- **Diagnostic command** (`oubli doctor`) for troubleshooting
 
 ### Not Yet Implemented
 - Web UI for browsing memories
-- Memory graph visualization
 - Git-based sync between machines
 
 ## Development Commands
@@ -166,6 +159,9 @@ git clone https://github.com/dremok/oubli.git
 cd oubli
 pip install -e .
 oubli setup
+
+# Diagnose installation issues
+oubli doctor
 
 # Visualize memory graph
 oubli viz

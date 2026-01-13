@@ -73,22 +73,12 @@ oubli setup  # Installs everything locally in this project
 
 Then restart Claude Code. The embedding model (~80MB) downloads on first use.
 
-**Everything is project-local by default:**
-- `.mcp.json` - MCP server registration
-- `.claude/` - Hooks, commands, instructions
-- `.oubli/` - Your memories and Core Memory
+**Config is per-project, data is global:**
+- `.mcp.json` - MCP server registration (per-project)
+- `.claude/` - Hooks, commands, instructions (per-project)
+- `~/.oubli/` - Your memories and Core Memory (shared globally)
 
-This means each project has its own isolated Oubli installation and memories.
-
-### Global Installation (Optional)
-
-To install globally (shared across all projects):
-
-```bash
-oubli setup --global
-```
-
-This registers the MCP server globally and puts everything in `~/.claude/` and `~/.oubli/`.
+This means your memories follow you across all your projects.
 
 ### Requirements
 
@@ -98,9 +88,9 @@ This registers the MCP server globally and puts everything in `~/.claude/` and `
 ### Uninstall
 
 ```bash
-oubli uninstall           # Removes local installation from current project
-oubli uninstall --global  # Removes global installation
+oubli uninstall    # Removes config from current project (keeps memories)
 pip uninstall oubli
+rm -rf ~/.oubli/   # Optional: delete all memories
 ```
 
 ## How It Works
@@ -187,9 +177,19 @@ Claude parses it into structured memories and optionally creates your Core Memor
 ### CLI Commands
 
 ```bash
+oubli setup            # Set up Oubli in current project
+oubli doctor           # Diagnose installation issues
 oubli viz              # Open interactive memory graph in browser
 oubli viz --no-open    # Generate graph.html without opening
 ```
+
+**Troubleshooting with `oubli doctor`:**
+
+If memories aren't appearing, run `oubli doctor` to check:
+- Package version (and if updates are available)
+- Memory count and levels
+- Core memory status
+- Project configuration
 
 The visualization shows:
 - **Hierarchical tree** - Raw memories at top, synthesized insights below
@@ -199,7 +199,7 @@ The visualization shows:
 
 ## Data Storage
 
-Data is stored in `.oubli/` (local install) or `~/.oubli/` (global install):
+Data is stored globally in `~/.oubli/` (shared across all projects):
 
 | File | Description |
 |------|-------------|
@@ -209,7 +209,7 @@ Data is stored in `.oubli/` (local install) or `~/.oubli/` (global install):
 
 ## What Gets Installed
 
-### Local Installation (Default)
+**Per-Project (local configuration):**
 
 | Component | Location | Description |
 |-----------|----------|-------------|
@@ -217,17 +217,12 @@ Data is stored in `.oubli/` (local install) or `~/.oubli/` (global install):
 | Hooks | `.claude/settings.local.json` | UserPromptSubmit, PreCompact, Stop |
 | Commands | `.claude/commands/` | `/clear-memories`, `/synthesize`, `/visualize-memory` |
 | Instructions | `.claude/CLAUDE.md` | How Claude uses the memory system |
-| Data | `.oubli/` | Memories and Core Memory |
 
-### Global Installation (`--global`)
+**Global (shared data):**
 
 | Component | Location | Description |
 |-----------|----------|-------------|
-| MCP Server | `claude mcp` registry | 15 memory tools |
-| Hooks | `~/.claude/settings.json` | UserPromptSubmit, PreCompact, Stop |
-| Commands | `~/.claude/commands/` | `/clear-memories`, `/synthesize`, `/visualize-memory` |
-| Instructions | `~/.claude/CLAUDE.md` | How Claude uses the memory system |
-| Data | `~/.oubli/` | Memories and Core Memory |
+| Data | `~/.oubli/` | Memories and Core Memory (shared across all projects) |
 
 ## MCP Tools
 
