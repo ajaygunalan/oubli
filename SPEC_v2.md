@@ -98,8 +98,7 @@ oubli/
 │           └── synthesize.md      # /synthesize skill
 ├── pyproject.toml               # Package definition
 ├── README.md                    # Documentation
-├── CLAUDE.md                    # Project development instructions
-└── install.sh                   # Legacy manual install script
+└── CLAUDE.md                    # Project development instructions
 ```
 
 **User data directory (`~/.oubli/`):**

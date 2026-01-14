@@ -124,10 +124,11 @@ src/oubli/
 - **PreCompact** - Saves memories before context compaction (prevents losing info in long sessions)
 - **Stop** - Saves memories at session end
 
-## Current Status (v0.4.6)
+## Current Status (v0.4.7)
 
 ### Completed
 - PyPI installation (`pip install oubli && oubli setup`)
+- **Local-only installation** - Instructions installed to `.claude/CLAUDE.md` per-project (not global)
 - **Hybrid search** - BM25 FTS + semantic embeddings (sentence-transformers)
 - LanceDB storage with vector column (384 dims, all-MiniLM-L6-v2)
 - Auto-embedding on save and update

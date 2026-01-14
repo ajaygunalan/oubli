@@ -206,3 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .idea/
+
+# Oubli local config (installed via oubli setup)
+.claude/
+.mcp.json
