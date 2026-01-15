@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oubli - Intro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a14;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            padding: 60px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 72px;
+            font-weight: 700;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            margin-bottom: 60px;
+            background: linear-gradient(135deg, #9B59B6 0%, #E74C3C 50%, #50C878 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            opacity: 0;
+        }
+
+        .tagline {
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 50px;
+            line-height: 1.5;
+            font-weight: 300;
+            min-height: 100px;
+        }
+
+        .description {
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.8;
+            min-height: 200px;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1em;
+            background: rgba(255, 255, 255, 0.8);
+            margin-left: 2px;
+            animation: blink 1s infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Particle background */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+
+    <div class="controls" id="controls">
+        <button class="btn" id="btn-start">Start</button>
+        <button class="btn" id="btn-hide">Hide UI</button>
+    </div>
+
+    <div class="container">
+        <div class="logo" id="logo">Oubli</div>
+        <div class="tagline" id="tagline"></div>
+        <div class="description" id="description"></div>
+    </div>
+
+    <script>
+    // Create particles
+    const particlesContainer = document.getElementById('particles');
+    for (let i = 0; i < 100; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.opacity = Math.random() * 0.5 + 0.1;
+        particle.style.width = (Math.random() * 2 + 1) + 'px';
+        particle.style.height = particle.style.width;
+        particlesContainer.appendChild(particle);
+
+        // Gentle floating animation
+        gsap.to(particle, {
+            y: (Math.random() - 0.5) * 100,
+            x: (Math.random() - 0.5) * 50,
+            duration: Math.random() * 10 + 10,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+        });
+    }
+
+    // Text content
+    const taglineText = "Claude Code that remembers you.";
+    const descriptionLines = [
+        "Oubli builds a fractal memory of who you are.",
+        "Raw conversations synthesize into insights.",
+        "Insights compound into understanding.",
+        "Every session picks up where you left off."
+    ];
+
+    let isTyping = false;
+
+    async function typeText(element, text, speed = 50) {
+        element.innerHTML = '';
+        const cursor = document.createElement('span');
+        cursor.className = 'cursor';
+
+        for (let i = 0; i < text.length; i++) {
+            element.innerHTML = text.substring(0, i + 1);
+            element.appendChild(cursor);
+            await sleep(speed + Math.random() * 30);
+        }
+
+        // Keep cursor blinking at the end
+        element.appendChild(cursor);
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function startSequence() {
+        if (isTyping) return;
+        isTyping = true;
+
+        const logo = document.getElementById('logo');
+        const tagline = document.getElementById('tagline');
+        const description = document.getElementById('description');
+
+        // Reset
+        tagline.innerHTML = '';
+        description.innerHTML = '';
+
+        // Fade in logo
+        gsap.to(logo, { opacity: 1, duration: 1.5, ease: 'power2.out' });
+        await sleep(2000);
+
+        // Type tagline
+        await typeText(tagline, taglineText, 60);
+        await sleep(1500);
+
+        // Type description lines
+        description.innerHTML = '';
+        const cursor = document.createElement('span');
+        cursor.className = 'cursor';
+
+        for (let lineIndex = 0; lineIndex < descriptionLines.length; lineIndex++) {
+            const line = descriptionLines[lineIndex];
+            const lineSpan = document.createElement('span');
+            description.appendChild(lineSpan);
+
+            for (let i = 0; i < line.length; i++) {
+                lineSpan.textContent = line.substring(0, i + 1);
+                // Move cursor to end
+                if (cursor.parentNode) cursor.remove();
+                lineSpan.appendChild(cursor);
+                await sleep(35 + Math.random() * 30);
+            }
+
+            cursor.remove();
+
+            // Add line break after each line except the last
+            if (lineIndex < descriptionLines.length - 1) {
+                description.appendChild(document.createElement('br'));
+                await sleep(400);
+            }
+        }
+
+        description.appendChild(cursor);
+
+        // Remove cursor after a delay
+        await sleep(2000);
+        const cursors = document.querySelectorAll('.cursor');
+        cursors.forEach(c => c.remove());
+
+        isTyping = false;
+    }
+
+    // Controls
+    document.getElementById('btn-start').onclick = startSequence;
+
+    let uiHidden = false;
+    document.getElementById('btn-hide').onclick = () => {
+        uiHidden = !uiHidden;
+        document.getElementById('controls').classList.toggle('hidden', uiHidden);
+    };
+
+    // Auto-start after a short delay
+    setTimeout(startSequence, 1000);
+    </script>
+</body>
+</html>
