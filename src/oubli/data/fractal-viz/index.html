@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oubli - Fractal Memory</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a14;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .ui-overlay {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .ui-overlay > * {
+            pointer-events: auto;
+        }
+
+        .top-bar {
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn.active {
+            background: rgba(155, 89, 182, 0.4);
+            border-color: rgba(155, 89, 182, 0.8);
+        }
+
+        .breadcrumb {
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .breadcrumb-item {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 15px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .breadcrumb-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .breadcrumb-item.current {
+            background: rgba(155, 89, 182, 0.3);
+            color: #fff;
+        }
+
+        .breadcrumb-separator {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+        }
+
+        .level-indicator {
+            bottom: 30px;
+            right: 30px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="ui-overlay top-bar" id="top-bar">
+        <div class="logo">Oubli</div>
+        <div class="controls">
+            <button class="btn" id="btn-autoplay">Auto-play</button>
+            <button class="btn" id="btn-reset">Reset</button>
+            <button class="btn" id="btn-hide-ui">Hide UI</button>
+        </div>
+    </div>
+
+    <div class="ui-overlay breadcrumb" id="breadcrumb"></div>
+
+    <div class="ui-overlay level-indicator" id="level-indicator">Level 3</div>
+
+    <script>
+    // ============================================
+    // DEMO DATA - Generic memories with fractal structure
+    // ============================================
+    const DEMO_DATA = {
+        memories: [
+            // Level 3 (3 high-level identity insights)
+            { id: 'l3-1', level: 3, summary: 'Treats every problem like a puzzle to be optimized', parent_ids: [], child_ids: ['l2-1', 'l2-2', 'l2-3', 'l2-4', 'l2-5'] },
+            { id: 'l3-2', level: 3, summary: 'Collects hobbies like others collect stamps', parent_ids: [], child_ids: [] },
+            { id: 'l3-3', level: 3, summary: 'Emotionally attached to elegance', parent_ids: [], child_ids: [] },
+
+            // Level 2 (5 children of l3-1) - patterns of optimization behavior
+            { id: 'l2-1', level: 2, summary: "Can't resist automating repetitive tasks", parent_ids: ['l3-1'], child_ids: ['l1-1', 'l1-2', 'l1-3', 'l1-4', 'l1-5', 'l1-6'] },
+            { id: 'l2-2', level: 2, summary: 'Reverse-engineers everything to understand it', parent_ids: ['l3-1'], child_ids: [] },
+            { id: 'l2-3', level: 2, summary: 'Gets satisfaction from eliminating unnecessary steps', parent_ids: ['l3-1'], child_ids: [] },
+            { id: 'l2-4', level: 2, summary: 'Measures things others never think to measure', parent_ids: ['l3-1'], child_ids: [] },
+            { id: 'l2-5', level: 2, summary: 'Views constraints as creative challenges', parent_ids: ['l3-1'], child_ids: [] },
+
+            // Level 1 (6 children of l2-1) - specific automation tendencies
+            { id: 'l1-1', level: 1, summary: 'Has written scripts for absurdly small time savings', parent_ids: ['l2-1'], child_ids: ['l0-1', 'l0-2', 'l0-3', 'l0-4', 'l0-5', 'l0-6', 'l0-7', 'l0-8'] },
+            { id: 'l1-2', level: 1, summary: 'Spent more time on the setup than the actual task', parent_ids: ['l2-1'], child_ids: [] },
+            { id: 'l1-3', level: 1, summary: 'Maintains a personal wiki of shortcuts', parent_ids: ['l2-1'], child_ids: [] },
+            { id: 'l1-4', level: 1, summary: 'Gets genuinely excited about new CLI tools', parent_ids: ['l2-1'], child_ids: [] },
+            { id: 'l1-5', level: 1, summary: 'Has aliases for already-short commands', parent_ids: ['l2-1'], child_ids: [] },
+            { id: 'l1-6', level: 1, summary: 'Automates things, then never uses them again', parent_ids: ['l2-1'], child_ids: [] },
+
+            // Level 0 (8 raw memories - children of l1-1) - specific incidents of absurd automation
+            { id: 'l0-1', level: 0, summary: 'Wrote a 50-line script to rename 4 files', parent_ids: ['l1-1'], child_ids: [] },
+            { id: 'l0-2', level: 0, summary: 'Spent 3 hours automating a 10-second task', parent_ids: ['l1-1'], child_ids: [] },
+            { id: 'l0-3', level: 0, summary: 'Built a coffee-order bot, used it exactly once', parent_ids: ['l1-1'], child_ids: [] },
+            { id: 'l0-4', level: 0, summary: 'Has a script that generates other scripts', parent_ids: ['l1-1'], child_ids: [] },
+            { id: 'l0-5', level: 0, summary: 'Automated email sorting, still 12k unread', parent_ids: ['l1-1'], child_ids: [] },
+            { id: 'l0-6', level: 0, summary: 'Created a habit tracker dashboard, abandoned in 2 weeks', parent_ids: ['l1-1'], child_ids: [] },
+            { id: 'l0-7', level: 0, summary: 'Made a birthday reminder bot, forgot to turn it on', parent_ids: ['l1-1'], child_ids: [] },
+            { id: 'l0-8', level: 0, summary: 'Wrote a Slack bot that only responds to puns', parent_ids: ['l1-1'], child_ids: [] },
+        ]
+    };
+
+    // Build lookup maps
+    const memoryById = {};
+    DEMO_DATA.memories.forEach(m => memoryById[m.id] = m);
+
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    const CONFIG = {
+        colors: {
+            level0: 0x4A90D9,  // Blue
+            level1: 0x50C878,  // Green
+            level2: 0x9B59B6,  // Purple
+            level3: 0xE74C3C,  // Red/coral for highest
+        },
+        glowColors: {
+            level0: 0x4A90D9,
+            level1: 0x50C878,
+            level2: 0x9B59B6,
+            level3: 0xE74C3C,
+        },
+        nodeSize: {
+            level0: 25,
+            level1: 35,
+            level2: 50,
+            level3: 70,
+        },
+        zoomDuration: 2.5,
+        scatterRadius: 260,
+        particleCount: 150,
+    };
+
+    // ============================================
+    // PIXI APPLICATION
+    // ============================================
+    const app = new PIXI.Application({
+        resizeTo: window,
+        backgroundColor: 0x0a0a14,
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+    });
+
+    document.getElementById('canvas-container').appendChild(app.view);
+
+    // Main container for zoom/pan
+    const worldContainer = new PIXI.Container();
+    app.stage.addChild(worldContainer);
+
+    // Layers
+    const particleLayer = new PIXI.Container();
+    const connectionLayer = new PIXI.Container();
+    const nodeLayer = new PIXI.Container();
+    const glowLayer = new PIXI.Container();
+
+    worldContainer.addChild(particleLayer);
+    worldContainer.addChild(connectionLayer);
+    worldContainer.addChild(glowLayer);
+    worldContainer.addChild(nodeLayer);
+
+    // Center the world (shifted down to avoid breadcrumb)
+    worldContainer.x = app.screen.width / 2;
+    worldContainer.y = app.screen.height / 2 + 50;
+
+    // ============================================
+    // STATE
+    // ============================================
+    let currentLevel = 3;
+    let visibleMemories = [];
+    let nodeSprites = {};
+    let glowSprites = {};
+    let connectionGraphics = new PIXI.Graphics();
+    let zoomPath = []; // Stack of zoomed-into memory IDs
+    let isAnimating = false;
+    let isAutoPlaying = false;
+    let particles = [];
+
+    connectionLayer.addChild(connectionGraphics);
+
+    // ============================================
+    // PARTICLE SYSTEM
+    // ============================================
+    function createParticles() {
+        for (let i = 0; i < CONFIG.particleCount; i++) {
+            const particle = new PIXI.Graphics();
+            const size = Math.random() * 2 + 0.5;
+            const alpha = Math.random() * 0.3 + 0.1;
+
+            particle.beginFill(0xffffff, alpha);
+            particle.drawCircle(0, 0, size);
+            particle.endFill();
+
+            particle.x = (Math.random() - 0.5) * 2000;
+            particle.y = (Math.random() - 0.5) * 2000;
+            particle.vx = (Math.random() - 0.5) * 0.3;
+            particle.vy = (Math.random() - 0.5) * 0.3;
+            particle.baseAlpha = alpha;
+
+            particleLayer.addChild(particle);
+            particles.push(particle);
+        }
+    }
+
+    function updateParticles() {
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // Wrap around
+            if (p.x > 1000) p.x = -1000;
+            if (p.x < -1000) p.x = 1000;
+            if (p.y > 1000) p.y = -1000;
+            if (p.y < -1000) p.y = 1000;
+        });
+    }
+
+    // ============================================
+    // NODE CREATION
+    // ============================================
+    function getColorForLevel(level) {
+        return CONFIG.colors[`level${Math.min(level, 3)}`] || CONFIG.colors.level0;
+    }
+
+    function getSizeForLevel(level) {
+        return CONFIG.nodeSize[`level${Math.min(level, 3)}`] || CONFIG.nodeSize.level0;
+    }
+
+    function createGlow(x, y, radius, color) {
+        const glow = new PIXI.Graphics();
+
+        // Multiple layers for soft glow effect
+        for (let i = 5; i >= 1; i--) {
+            const glowRadius = radius * (1 + i * 0.4);
+            const alpha = 0.1 / i;
+            glow.beginFill(color, alpha);
+            glow.drawCircle(0, 0, glowRadius);
+            glow.endFill();
+        }
+
+        glow.x = x;
+        glow.y = y;
+        return glow;
+    }
+
+    function wrapText(text, maxWidth, fontSize) {
+        // Simple word wrap for labels
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        // Approximate character width
+        const charWidth = fontSize * 0.5;
+        const maxChars = Math.floor(maxWidth / charWidth);
+
+        words.forEach(word => {
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            if (testLine.length > maxChars && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        });
+        if (currentLine) lines.push(currentLine);
+
+        return lines.slice(0, 3).join('\n'); // Max 3 lines
+    }
+
+    function createNode(memory, x, y) {
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.memoryId = memory.id;
+        container.memory = memory;
+
+        const radius = getSizeForLevel(memory.level);
+        const color = getColorForLevel(memory.level);
+
+        // Main node circle
+        const node = new PIXI.Graphics();
+
+        // Gradient-like effect with multiple circles
+        for (let i = 3; i >= 0; i--) {
+            const r = radius * (1 - i * 0.15);
+            const alpha = 0.3 + (3 - i) * 0.2;
+            node.beginFill(color, alpha);
+            node.drawCircle(0, 0, r);
+            node.endFill();
+        }
+
+        // Bright center
+        node.beginFill(0xffffff, 0.6);
+        node.drawCircle(0, 0, radius * 0.3);
+        node.endFill();
+
+        container.addChild(node);
+
+        // Add text label
+        const fontSize = Math.max(12, Math.min(16, radius * 0.35));
+        const maxWidth = 180;
+        const wrappedText = wrapText(memory.summary, maxWidth, fontSize);
+
+        const label = new PIXI.Text(wrappedText, {
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontSize: fontSize,
+            fill: 0xffffff,
+            align: 'center',
+            wordWrap: false,
+            dropShadow: true,
+            dropShadowColor: 0x000000,
+            dropShadowBlur: 4,
+            dropShadowDistance: 0,
+            dropShadowAlpha: 0.8,
+        });
+        label.anchor.set(0.5, 0);
+        label.y = radius + 12;
+        container.addChild(label);
+        container.label = label;
+
+        // Interactivity
+        container.eventMode = 'static';
+        container.cursor = 'pointer';
+
+        // Hover effect
+        container.on('pointerover', () => {
+            if (isAnimating) return;
+            gsap.to(container.scale, { x: 1.15, y: 1.15, duration: 0.2 });
+
+            // Pulse the glow
+            const glow = glowSprites[memory.id];
+            if (glow) {
+                gsap.to(glow, { alpha: 1, duration: 0.2 });
+            }
+        });
+
+        container.on('pointerout', () => {
+            gsap.to(container.scale, { x: 1, y: 1, duration: 0.2 });
+
+            const glow = glowSprites[memory.id];
+            if (glow) {
+                gsap.to(glow, { alpha: 0.5, duration: 0.2 });
+            }
+        });
+
+        // Click to zoom
+        container.on('pointertap', () => {
+            if (isAnimating) return;
+            if (memory.child_ids && memory.child_ids.length > 0) {
+                zoomIntoMemory(memory);
+            }
+        });
+
+        return container;
+    }
+
+    // ============================================
+    // BREADCRUMB
+    // ============================================
+    function updateBreadcrumb() {
+        const container = document.getElementById('breadcrumb');
+        container.innerHTML = '';
+
+        // Root
+        const root = document.createElement('div');
+        root.className = 'breadcrumb-item' + (zoomPath.length === 0 ? ' current' : '');
+        root.textContent = 'Overview';
+        root.onclick = () => resetToOverview();
+        container.appendChild(root);
+
+        // Path - show the level of memories being DISPLAYED (children of clicked node)
+        zoomPath.forEach((id, index) => {
+            const sep = document.createElement('span');
+            sep.className = 'breadcrumb-separator';
+            sep.textContent = '→';
+            container.appendChild(sep);
+
+            const item = document.createElement('div');
+            item.className = 'breadcrumb-item' + (index === zoomPath.length - 1 ? ' current' : '');
+            const memory = memoryById[id];
+            item.textContent = `Level ${memory.level - 1}`;
+            item.onclick = () => zoomToPathIndex(index);
+            container.appendChild(item);
+        });
+    }
+
+    function updateLevelIndicator() {
+        const indicator = document.getElementById('level-indicator');
+        indicator.textContent = `Level ${currentLevel}`;
+    }
+
+    // ============================================
+    // RENDERING
+    // ============================================
+    function clearNodes() {
+        Object.values(nodeSprites).forEach(sprite => {
+            nodeLayer.removeChild(sprite);
+            sprite.destroy();
+        });
+        Object.values(glowSprites).forEach(sprite => {
+            glowLayer.removeChild(sprite);
+            sprite.destroy();
+        });
+        nodeSprites = {};
+        glowSprites = {};
+        connectionGraphics.clear();
+    }
+
+    function renderLevel(level, centerMemoryId = null, animate = true) {
+        clearNodes();
+
+        let memories;
+        if (centerMemoryId) {
+            // Show children of the center memory
+            const centerMemory = memoryById[centerMemoryId];
+            memories = centerMemory.child_ids.map(id => memoryById[id]).filter(Boolean);
+        } else {
+            // Show top level
+            memories = DEMO_DATA.memories.filter(m => m.level === level);
+        }
+
+        visibleMemories = memories;
+        currentLevel = memories.length > 0 ? memories[0].level : level;
+
+        // Position nodes in a circle
+        const angleStep = (Math.PI * 2) / memories.length;
+        const radius = CONFIG.scatterRadius;
+
+        memories.forEach((memory, index) => {
+            const angle = angleStep * index - Math.PI / 2;
+            const targetX = Math.cos(angle) * radius;
+            const targetY = Math.sin(angle) * radius;
+
+            // Create glow
+            const glow = createGlow(0, 0, getSizeForLevel(memory.level), getColorForLevel(memory.level));
+            glow.alpha = 0.5;
+            glowLayer.addChild(glow);
+            glowSprites[memory.id] = glow;
+
+            // Create node
+            const node = createNode(memory, 0, 0);
+            node.scale.set(0);
+            nodeLayer.addChild(node);
+            nodeSprites[memory.id] = node;
+
+            if (animate) {
+                // Scatter animation - nodes burst outward
+                const delay = index * 0.08;
+                gsap.to(node, {
+                    x: targetX,
+                    y: targetY,
+                    duration: 1.2,
+                    delay: delay,
+                    ease: 'elastic.out(1, 0.5)',
+                });
+                gsap.to(node.scale, {
+                    x: 1,
+                    y: 1,
+                    duration: 0.6,
+                    delay: delay,
+                    ease: 'back.out(2)',
+                });
+                gsap.to(glow, {
+                    x: targetX,
+                    y: targetY,
+                    duration: 1.2,
+                    delay: delay,
+                    ease: 'elastic.out(1, 0.5)',
+                });
+            } else {
+                node.x = targetX;
+                node.y = targetY;
+                node.scale.set(1);
+                glow.x = targetX;
+                glow.y = targetY;
+            }
+        });
+
+        updateBreadcrumb();
+        updateLevelIndicator();
+
+        // Draw connections after animation
+        if (animate) {
+            setTimeout(() => drawConnections(), 1500);
+        } else {
+            drawConnections();
+        }
+    }
+
+    function drawConnections() {
+        connectionGraphics.clear();
+        connectionGraphics.lineStyle(1, 0xffffff, 0.1);
+
+        // Connect visible nodes to each other (subtle web)
+        visibleMemories.forEach((m1, i) => {
+            visibleMemories.forEach((m2, j) => {
+                if (i < j) {
+                    const n1 = nodeSprites[m1.id];
+                    const n2 = nodeSprites[m2.id];
+                    if (n1 && n2) {
+                        connectionGraphics.moveTo(n1.x, n1.y);
+                        connectionGraphics.lineTo(n2.x, n2.y);
+                    }
+                }
+            });
+        });
+    }
+
+    // ============================================
+    // ZOOM ANIMATION
+    // ============================================
+    function zoomIntoMemory(memory) {
+        if (isAnimating || !memory.child_ids || memory.child_ids.length === 0) return;
+
+        isAnimating = true;
+
+        const node = nodeSprites[memory.id];
+
+        // Collapse all nodes to center while zooming
+        const duration = CONFIG.zoomDuration;
+
+        // Fade and shrink other nodes
+        Object.entries(nodeSprites).forEach(([id, sprite]) => {
+            if (id !== memory.id) {
+                gsap.to(sprite, { alpha: 0, duration: duration * 0.4 });
+                gsap.to(sprite.scale, { x: 0, y: 0, duration: duration * 0.5 });
+            }
+        });
+
+        Object.entries(glowSprites).forEach(([id, sprite]) => {
+            gsap.to(sprite, { alpha: 0, duration: duration * 0.4 });
+        });
+
+        // Zoom into target node
+        gsap.to(node, {
+            x: 0,
+            y: 0,
+            duration: duration * 0.6,
+            ease: 'power2.inOut',
+        });
+
+        gsap.to(node.scale, {
+            x: 3,
+            y: 3,
+            duration: duration * 0.6,
+            ease: 'power2.in',
+        });
+
+        gsap.to(node, {
+            alpha: 0,
+            duration: duration * 0.3,
+            delay: duration * 0.5,
+            ease: 'power2.in',
+            onComplete: () => {
+                // Update path
+                zoomPath.push(memory.id);
+
+                // Render children
+                renderLevel(memory.level - 1, memory.id, true);
+
+                isAnimating = false;
+            }
+        });
+    }
+
+    function resetToOverview() {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        // Fade out current nodes
+        Object.values(nodeSprites).forEach(sprite => {
+            gsap.to(sprite, { alpha: 0, duration: 0.3 });
+            gsap.to(sprite.scale, { x: 0, y: 0, duration: 0.4 });
+        });
+
+        Object.values(glowSprites).forEach(sprite => {
+            gsap.to(sprite, { alpha: 0, duration: 0.3 });
+        });
+
+        setTimeout(() => {
+            zoomPath = [];
+            renderLevel(3, null, true);
+            isAnimating = false;
+        }, 500);
+    }
+
+    function zoomToPathIndex(index) {
+        if (isAnimating) return;
+
+        // Truncate path and re-render
+        if (index < zoomPath.length - 1) {
+            isAnimating = true;
+
+            Object.values(nodeSprites).forEach(sprite => {
+                gsap.to(sprite, { alpha: 0, duration: 0.3 });
+            });
+
+            setTimeout(() => {
+                zoomPath = zoomPath.slice(0, index + 1);
+                const parentId = zoomPath[zoomPath.length - 1];
+                const parent = memoryById[parentId];
+                renderLevel(parent.level - 1, parentId, true);
+                isAnimating = false;
+            }, 400);
+        }
+    }
+
+    // ============================================
+    // AUTO-PLAY
+    // ============================================
+    async function autoPlay() {
+        if (isAutoPlaying) {
+            isAutoPlaying = false;
+            document.getElementById('btn-autoplay').classList.remove('active');
+            return;
+        }
+
+        isAutoPlaying = true;
+        document.getElementById('btn-autoplay').classList.add('active');
+
+        // Reset first
+        resetToOverview();
+        await sleep(2000);
+
+        // Define the zoom path
+        const autoZoomPath = ['l3-1', 'l2-1', 'l1-1'];
+
+        for (const memoryId of autoZoomPath) {
+            if (!isAutoPlaying) break;
+
+            await sleep(1500); // Pause to show current level
+
+            // Highlight the target
+            const node = nodeSprites[memoryId];
+            if (node) {
+                gsap.to(node.scale, { x: 1.2, y: 1.2, duration: 0.5, yoyo: true, repeat: 1 });
+                await sleep(1200);
+            }
+
+            // Zoom in
+            const memory = memoryById[memoryId];
+            if (memory && isAutoPlaying) {
+                zoomIntoMemory(memory);
+                await sleep(3000); // Wait for zoom animation
+            }
+        }
+
+        // At Level 0: spotlight each raw memory
+        await sleep(1000);
+
+        const l0Memories = ['l0-1', 'l0-2', 'l0-3', 'l0-4', 'l0-5', 'l0-6', 'l0-7', 'l0-8'];
+
+        for (const memoryId of l0Memories) {
+            if (!isAutoPlaying) break;
+
+            const node = nodeSprites[memoryId];
+            const glow = glowSprites[memoryId];
+
+            if (node) {
+                // Zoom camera to this node
+                const zoomLevel = 1.15;
+                gsap.to(worldContainer, {
+                    x: app.screen.width / 2 - node.x * zoomLevel,
+                    y: app.screen.height / 2 + 50 - node.y * zoomLevel,
+                    duration: 0.4,
+                    ease: 'power2.out',
+                });
+                gsap.to(worldContainer.scale, {
+                    x: zoomLevel,
+                    y: zoomLevel,
+                    duration: 0.4,
+                    ease: 'power2.out',
+                });
+
+                // Highlight this node
+                gsap.to(node.scale, { x: 1.3, y: 1.3, duration: 0.3 });
+                if (glow) gsap.to(glow, { alpha: 1.2, duration: 0.3 });
+
+                await sleep(800);
+
+                // Reset node
+                gsap.to(node.scale, { x: 1, y: 1, duration: 0.2 });
+                if (glow) gsap.to(glow, { alpha: 0.5, duration: 0.2 });
+            }
+        }
+
+        // Reset camera
+        await sleep(300);
+        gsap.to(worldContainer, {
+            x: app.screen.width / 2,
+            y: app.screen.height / 2 + 50,
+            duration: 0.6,
+            ease: 'power2.inOut',
+        });
+        gsap.to(worldContainer.scale, {
+            x: 1,
+            y: 1,
+            duration: 0.6,
+            ease: 'power2.inOut',
+        });
+
+        await sleep(500);
+
+        isAutoPlaying = false;
+        document.getElementById('btn-autoplay').classList.remove('active');
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ============================================
+    // UI CONTROLS
+    // ============================================
+    document.getElementById('btn-autoplay').onclick = autoPlay;
+    document.getElementById('btn-reset').onclick = resetToOverview;
+
+    let uiHidden = false;
+    document.getElementById('btn-hide-ui').onclick = () => {
+        uiHidden = !uiHidden;
+        document.getElementById('top-bar').classList.toggle('hidden', uiHidden);
+        document.getElementById('breadcrumb').classList.toggle('hidden', uiHidden);
+        document.getElementById('level-indicator').classList.toggle('hidden', uiHidden);
+    };
+
+    // ============================================
+    // ANIMATION LOOP
+    // ============================================
+    let time = 0;
+    app.ticker.add((delta) => {
+        time += delta * 0.01;
+
+        updateParticles();
+
+        // Subtle pulsing on nodes
+        Object.values(nodeSprites).forEach((sprite, i) => {
+            if (!isAnimating) {
+                const pulse = 1 + Math.sin(time * 2 + i) * 0.03;
+                sprite.scale.set(sprite.scale.x > 0.1 ? pulse : 0);
+            }
+        });
+
+        // Glow pulsing
+        Object.values(glowSprites).forEach((sprite, i) => {
+            if (!isAnimating && sprite.alpha > 0.1) {
+                sprite.alpha = 0.4 + Math.sin(time * 1.5 + i) * 0.15;
+            }
+        });
+    });
+
+    // ============================================
+    // INITIALIZE
+    // ============================================
+    createParticles();
+    renderLevel(3, null, true);
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+        worldContainer.x = app.screen.width / 2;
+        worldContainer.y = app.screen.height / 2 + 50;
+    });
+    </script>
+</body>
+</html>

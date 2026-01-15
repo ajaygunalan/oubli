@@ -537,5 +537,109 @@ def viz(output, no_open):
         click.echo(f"Opening graph: {result_path}")
 
 
+@main.command()
+@click.option("--speed", "-s", type=float, default=0.008,
+              help="Animation speed (delay between columns in seconds)")
+@click.option("--static", is_flag=True, default=False,
+              help="Print logo without animation")
+@click.option("--no-interactive", is_flag=True, default=False,
+              help="Disable interactive mode (no mouse clicks, auto-exit)")
+def logo(speed, static, no_interactive):
+    """Display animated Oubli logo.
+
+    Shows a blocky pixel-art style logo with left-to-right sweep animation.
+    In interactive mode (default), click to explode pixels and press Q to quit.
+    """
+    from .logo import animate_logo, animate_logo_interactive, print_logo_static
+
+    if static:
+        print_logo_static()
+    elif no_interactive:
+        animate_logo(speed=speed)
+    else:
+        animate_logo_interactive(speed=speed)
+
+
+@main.command()
+@click.option("--demo", is_flag=True, default=False,
+              help="Use demo data instead of real memories (for marketing)")
+@click.option("--output", "-o", type=click.Path(), default=None,
+              help="Output path for HTML file (default: ~/.oubli/fractal.html)")
+@click.option("--no-open", is_flag=True, default=False,
+              help="Generate file but don't open in browser")
+def fractal(demo, output, no_open):
+    """Launch fractal zoom visualization.
+
+    Opens an animated, interactive visualization showing memories as a
+    fractal structure. Click to zoom into nodes and reveal their children.
+
+    Features:
+    - Auto-play mode for recording demos
+    - Hide UI button for clean recordings
+    - Smooth GSAP animations with particle effects
+
+    Use --demo for marketing videos with curated sample data.
+    """
+    import webbrowser
+
+    output_path = Path(output) if output else get_data_dir() / "fractal.html"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Get the fractal viz template
+    template_path = get_package_data_path() / "fractal-viz" / "index.html"
+
+    if demo:
+        # Just copy the template (it has embedded demo data)
+        shutil.copy(template_path, output_path)
+        click.echo(f"Fractal visualization (demo mode) saved to: {output_path}")
+    else:
+        # Load real memories and inject into template
+        try:
+            from .storage import MemoryStore
+            store = MemoryStore()
+            memories = store.list(limit=1000)
+
+            if not memories:
+                click.echo("No memories found. Use --demo for sample data.")
+                click.echo("Or save some memories first using Claude Code.")
+                return
+
+            # Convert to JSON format
+            memory_data = []
+            for m in memories:
+                memory_data.append({
+                    "id": m.id,
+                    "level": m.level,
+                    "summary": m.summary,
+                    "parent_ids": m.parent_ids or [],
+                    "child_ids": m.child_ids or [],
+                })
+
+            # Read template and replace demo data
+            with open(template_path) as f:
+                html = f.read()
+
+            # Find and replace the DEMO_DATA block
+            import re
+            memories_json = json.dumps(memory_data, indent=12)
+            # Replace the memories array in the template
+            pattern = r"memories: \[[\s\S]*?\],"
+            replacement = f"memories: {memories_json},"
+            html = re.sub(pattern, replacement, html, count=1)
+
+            with open(output_path, "w") as f:
+                f.write(html)
+
+            click.echo(f"Fractal visualization ({len(memories)} memories) saved to: {output_path}")
+
+        except Exception as e:
+            click.echo(f"Error loading memories: {e}")
+            click.echo("Use --demo for sample data instead.")
+            return
+
+    if not no_open:
+        webbrowser.open(f"file://{output_path.absolute()}")
+
+
 if __name__ == "__main__":
     main()
