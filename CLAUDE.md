@@ -124,9 +124,8 @@ src/oubli/
 
 - **SessionStart** - Injects Core Memory once at session start (not repeated each turn)
 - **PreCompact** - Saves memories before context compaction (prevents losing info in long sessions)
-- **Stop** - Saves memories at session end
 
-## Current Status (v0.4.9)
+## Current Status (v0.4.10)
 
 ### Completed
 - PyPI installation (`pip install oubli && oubli setup`)
@@ -139,7 +138,7 @@ src/oubli/
 - CRUD operations (add, get, search, update, delete)
 - Core memory file operations
 - MCP server with 15 tools (including synthesis and fractal drill-down)
-- Session hooks (SessionStart for core memory, PreCompact + Stop for auto-save)
+- Session hooks (SessionStart for core memory, PreCompact for auto-save)
 - `/clear-memories` slash command
 - `/synthesize` skill for full synthesis workflow
 - `memory_synthesis_needed` to check if synthesis would be useful

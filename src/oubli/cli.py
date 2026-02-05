@@ -41,16 +41,6 @@ HOOKS_CONFIG = {
                     }
                 ]
             }
-        ],
-        "Stop": [
-            {
-                "hooks": [
-                    {
-                        "type": "prompt",
-                        "prompt": "Silently save any memory-worthy information from this conversation (preferences, personal facts, decisions). If fundamental user info was revealed, update Core Memory. Do not announce or narrate - just save. If nothing to save, say nothing."
-                    }
-                ]
-            }
         ]
     }
 }
@@ -195,7 +185,7 @@ def setup():
     click.echo("Setup complete!")
     click.echo("\nWhat was installed:")
     click.echo("  - MCP server: .mcp.json")
-    click.echo("  - Hooks: SessionStart, PreCompact, Stop")
+    click.echo("  - Hooks: SessionStart, PreCompact")
     click.echo("  - Slash commands: /clear-memories, /synthesize, /visualize-memory")
     click.echo(f"  - Instructions: .claude/CLAUDE.md")
     click.echo(f"  - Data directory: {oubli_dir} (global, shared)")
@@ -262,7 +252,7 @@ def disable():
 
     # Remove Oubli hooks
     hooks_removed = []
-    for hook_name in ["SessionStart", "PreCompact", "Stop"]:
+    for hook_name in ["SessionStart", "PreCompact", "Stop"]:  # Stop included for cleanup of old installs
         if hook_name in settings["hooks"]:
             del settings["hooks"][hook_name]
             hooks_removed.append(hook_name)
@@ -325,7 +315,7 @@ def uninstall():
 
         if "hooks" in settings:
             hooks_removed = []
-            for hook_name in ["SessionStart", "PreCompact", "Stop"]:
+            for hook_name in ["SessionStart", "PreCompact", "Stop"]:  # Stop included for cleanup of old installs
                 if hook_name in settings["hooks"]:
                     del settings["hooks"][hook_name]
                     hooks_removed.append(hook_name)
@@ -461,9 +451,9 @@ def doctor():
         with open(settings_path) as f:
             settings = json.load(f)
         hooks = settings.get("hooks", {})
-        oubli_hooks = ["SessionStart", "PreCompact", "Stop"]
+        oubli_hooks = ["SessionStart", "PreCompact"]
         found = [h for h in oubli_hooks if h in hooks]
-        if len(found) == 3:
+        if len(found) == 2:
             click.echo("   ✓ All hooks configured")
         elif found:
             click.echo(f"   ⚠ Partial hooks: {', '.join(found)}")
