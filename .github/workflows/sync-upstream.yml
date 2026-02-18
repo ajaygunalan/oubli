@@ -1,0 +1,27 @@
+name: Sync fork with upstream
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC
+  workflow_dispatch:        # manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync with upstream
+        run: |
+          git remote add upstream https://github.com/dremok/oubli.git
+          git fetch upstream main
+          # Only merge if upstream has new commits
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Already up to date. Nothing to do."
+          else
+            git merge upstream/main --no-edit
+            git push origin main
+            echo "Synced with upstream."
+          fi
