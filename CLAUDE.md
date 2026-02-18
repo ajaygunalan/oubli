@@ -30,10 +30,10 @@ Examples of crucial info:
 - **LanceDB with hybrid search** - Embedded vector database with BM25 FTS + semantic embeddings
 - **sentence-transformers by default** - `all-MiniLM-L6-v2` for semantic search (~80MB, downloads on first use)
 - **MCP tools are simple CRUD** - Claude Code does the intelligent work (parsing, clustering, summarizing)
-- **Slash command for destructive ops** - `/clear-memories` requires explicit user invocation
-- **Core Memory is a markdown file** - `~/.oubli/core_memory.md`, human-readable and editable
+- **Skill for destructive ops** - `/clear-memories` requires explicit user invocation
+- **Core Memory is a markdown file** - `.oubli/core_memory.md`, human-readable and editable
 - **Everything runs locally** - No external services, no API keys needed
-- **Config local, data global** - Config installed per-project, memories shared across all projects
+- **Config and data are per-project** - Each project gets its own `.oubli/` directory
 
 ## Installation
 
@@ -50,11 +50,11 @@ Then restart Claude Code.
 **Per-project (local):**
 - `.mcp.json` - MCP server registration
 - `.claude/settings.local.json` - Hooks
-- `.claude/commands/` - Slash commands
+- `.claude/skills/` - Skills
 - `.claude/CLAUDE.md` - Instructions
 
-**Shared (global):**
-- `~/.oubli/` - Data directory (memories + core memory)
+**Per-project (data):**
+- `.oubli/` - Data directory (memories + core memory)
 
 To uninstall: `oubli uninstall` then `pip uninstall oubli`
 
@@ -64,7 +64,7 @@ To uninstall: `oubli uninstall` then `pip uninstall oubli`
 src/oubli/
 ├── __init__.py
 ├── cli.py              # CLI with setup/uninstall commands
-├── config.py           # Data directory resolution (always ~/.oubli/)
+├── config.py           # Data directory resolution (.oubli/ per-project)
 ├── mcp_server.py       # MCP tools for Claude Code (15 tools)
 ├── storage.py          # LanceDB storage with hybrid search
 ├── embeddings.py       # Sentence-transformers integration via LanceDB registry
@@ -72,10 +72,11 @@ src/oubli/
 ├── viz.py              # Memory graph visualization
 └── data/
     ├── CLAUDE.md       # Instructions installed to .claude/
-    └── commands/
-        ├── clear-memories.md    # /clear-memories slash command
-        ├── synthesize.md        # /synthesize skill
-        └── visualize-memory.md  # /visualize-memory command
+    └── skills/
+        ├── clear-memories/SKILL.md    # /clear-memories skill
+        ├── save/SKILL.md              # /save skill
+        ├── synthesize/SKILL.md        # /synthesize skill
+        └── visualize-memory/SKILL.md  # /visualize-memory skill
 ```
 
 ## Key Files
@@ -115,10 +116,12 @@ src/oubli/
 - `core_memory_get` - Get core memory content
 - `core_memory_save` - Save/replace core memory content
 
-## Slash Commands
+## Skills
 
 - `/clear-memories` - Clear all memories from the database (user must confirm)
+- `/save` - User-triggered memory checkpoint: sweep the conversation and save anything Claude missed
 - `/synthesize` - Run full synthesis workflow: merge duplicates, create insights, update Core Memory
+- `/visualize-memory` - Open an interactive graph visualization of all memories in the browser
 
 ## Hooks
 
@@ -139,7 +142,7 @@ src/oubli/
 - Core memory file operations
 - MCP server with 15 tools (including synthesis and fractal drill-down)
 - Session hooks (SessionStart for core memory, PreCompact for auto-save)
-- `/clear-memories` slash command
+- `/clear-memories` skill
 - `/synthesize` skill for full synthesis workflow
 - `memory_synthesis_needed` to check if synthesis would be useful
 - `memory_prepare_synthesis` for merging duplicates before synthesis
@@ -186,8 +189,8 @@ python -c "from oubli.storage import MemoryStore; store = MemoryStore(); print(s
 oubli --help
 oubli inject-context
 
-# Reset data
-rm -rf ~/.oubli/
+# Reset data (run from project directory)
+rm -rf .oubli/
 
 # Check MCP server loads
 python -c "from oubli.mcp_server import mcp; print([t.name for t in mcp._tool_manager._tools.values()])"
@@ -210,6 +213,8 @@ User can then upgrade in other projects: `pip install --upgrade oubli && oubli s
 
 ## Data Storage
 
-User data is stored in `~/.oubli/`:
+Data is stored in `.oubli/` inside each project directory:
 - `memories.lance/` - LanceDB database
 - `core_memory.md` - Core Memory file (~2K tokens, always loaded)
+
+Override with `OUBLI_DATA_DIR` env var if needed.

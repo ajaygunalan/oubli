@@ -431,10 +431,10 @@ def visualize(output_path: Path = None, open_browser: bool = True) -> Path:
     Returns:
         Path to generated HTML file
     """
-    from .config import resolve_data_dir
+    from .config import get_data_dir
 
     if output_path is None:
-        data_dir = resolve_data_dir(prefer_local=True)
+        data_dir = get_data_dir()
         output_path = data_dir / "graph.html"
 
     output_path = Path(output_path)

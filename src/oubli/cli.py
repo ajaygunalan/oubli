@@ -4,7 +4,7 @@ Provides command-line interface for setup, memory operations and session hooks.
 
 Architecture:
 - Config files (.mcp.json, .claude/) are installed locally per project
-- Data (~/.oubli/) is always global to share memories across projects
+- Data (.oubli/) is stored per-project in the project directory
 """
 
 import json
@@ -27,7 +27,7 @@ HOOKS_CONFIG = {
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "python -m oubli.cli inject-context"
+                        "command": f"{sys.executable} -m oubli.cli inject-context"
                     }
                 ]
             }
@@ -68,11 +68,15 @@ def main():
 
 
 def get_mcp_config(project_dir: Path) -> dict:
-    """Generate .mcp.json content for local MCP server registration."""
+    """Generate .mcp.json content for local MCP server registration.
+
+    Uses sys.executable to resolve to the correct Python (e.g. pipx venv)
+    so the MCP server can find the oubli package.
+    """
     return {
         "mcpServers": {
             "oubli": {
-                "command": "python",
+                "command": sys.executable,
                 "args": ["-m", "oubli.mcp_server"],
                 "cwd": str(project_dir)
             }
@@ -87,15 +91,15 @@ def setup():
     Installs configuration locally in the current project:
     - .mcp.json (MCP server registration)
     - .claude/settings.local.json (hooks)
-    - .claude/commands/ (slash commands)
+    - .claude/skills/ (skills)
     - .claude/CLAUDE.md (instructions)
 
-    Data is stored globally in ~/.oubli/ to share memories across all projects.
+    Data is stored in .oubli/ inside the project directory (per-project).
     """
     project_dir = Path.cwd()
     data_path = get_package_data_path()
     claude_dir = project_dir / ".claude"
-    oubli_dir = get_data_dir()  # Always ~/.oubli/
+    oubli_dir = get_data_dir()  # .oubli/ in project directory
 
     version = get_version()
     click.echo(f"Setting up Oubli v{version} - Fractal Memory System for Claude Code")
@@ -138,18 +142,31 @@ def setup():
             json.dump(HOOKS_CONFIG, f, indent=2)
         click.echo("   Hooks configured in .claude/settings.local.json")
 
-    # 3. Install slash commands
-    click.echo("\n3. Installing slash commands...")
-    commands_dir = claude_dir / "commands"
-    commands_dir.mkdir(exist_ok=True)
+    # 3. Install skills
+    click.echo("\n3. Installing skills...")
+    skills_dir = claude_dir / "skills"
+    skills_dir.mkdir(exist_ok=True)
 
-    src_commands_dir = data_path / "commands"
-    if src_commands_dir.exists():
-        for cmd_file in src_commands_dir.glob("*.md"):
-            shutil.copy(cmd_file, commands_dir / cmd_file.name)
-            click.echo(f"   /{cmd_file.stem} command installed")
+    src_skills_dir = data_path / "skills"
+    if src_skills_dir.exists():
+        for skill_src in src_skills_dir.iterdir():
+            if skill_src.is_dir():
+                skill_dst = skills_dir / skill_src.name
+                if skill_dst.exists():
+                    shutil.rmtree(skill_dst)
+                shutil.copytree(skill_src, skill_dst)
+                click.echo(f"   /{skill_src.name} skill installed")
     else:
-        click.echo("   Warning: commands directory not found in package data")
+        click.echo("   Warning: skills directory not found in package data")
+
+    # Clean up old slash commands if present
+    old_commands_dir = claude_dir / "commands"
+    old_oubli_commands = ["clear-memories.md", "save.md", "synthesize.md", "visualize-memory.md"]
+    for cmd_name in old_oubli_commands:
+        old_cmd = old_commands_dir / cmd_name
+        if old_cmd.exists():
+            old_cmd.unlink()
+            click.echo(f"   Removed old command: {cmd_name}")
 
     # 4. Install CLAUDE.md
     click.echo("\n4. Installing CLAUDE.md...")
@@ -161,10 +178,10 @@ def setup():
     else:
         click.echo("   Warning: CLAUDE.md not found in package data")
 
-    # 5. Create global data directory
+    # 5. Create project data directory
     click.echo("\n5. Creating data directory...")
     oubli_dir.mkdir(exist_ok=True)
-    click.echo(f"   Data directory: {oubli_dir} (shared across all projects)")
+    click.echo(f"   Data directory: {oubli_dir} (per-project)")
 
     # 6. Verify data directory and show stats
     click.echo("\n6. Verifying installation...")
@@ -186,9 +203,9 @@ def setup():
     click.echo("\nWhat was installed:")
     click.echo("  - MCP server: .mcp.json")
     click.echo("  - Hooks: SessionStart, PreCompact")
-    click.echo("  - Slash commands: /clear-memories, /synthesize, /visualize-memory")
+    click.echo("  - Skills: /clear-memories, /save, /synthesize, /visualize-memory")
     click.echo(f"  - Instructions: .claude/CLAUDE.md")
-    click.echo(f"  - Data directory: {oubli_dir} (global, shared)")
+    click.echo(f"  - Data directory: {oubli_dir} (per-project)")
     click.echo("\n⚠ IMPORTANT: Restart Claude Code to load the new MCP server.")
 
 
@@ -274,10 +291,10 @@ def uninstall():
     Removes:
     - .mcp.json (removes oubli entry)
     - .claude/settings.local.json (removes hooks)
-    - .claude/commands/ (removes slash commands)
+    - .claude/skills/ (removes skills)
     - .claude/CLAUDE.md
 
-    Note: Data (~/.oubli/) is NOT deleted to preserve your memories.
+    Note: Data (.oubli/) is NOT deleted to preserve your memories.
     """
     project_dir = Path.cwd()
     claude_dir = project_dir / ".claude"
@@ -331,15 +348,24 @@ def uninstall():
     else:
         click.echo("   No settings.local.json found")
 
-    # 3. Remove slash commands
-    click.echo("\n3. Removing slash commands...")
+    # 3. Remove skills and old slash commands
+    click.echo("\n3. Removing skills...")
+    skills_dir = claude_dir / "skills"
+    oubli_skills = ["clear-memories", "save", "synthesize", "visualize-memory"]
+    for skill_name in oubli_skills:
+        skill_path = skills_dir / skill_name
+        if skill_path.exists():
+            shutil.rmtree(skill_path)
+            click.echo(f"   /{skill_name} skill removed")
+
+    # Also clean up old slash commands from previous installs
     commands_dir = claude_dir / "commands"
-    oubli_commands = ["clear-memories.md", "synthesize.md", "visualize-memory.md"]
-    for cmd_name in oubli_commands:
+    old_oubli_commands = ["clear-memories.md", "save.md", "synthesize.md", "visualize-memory.md"]
+    for cmd_name in old_oubli_commands:
         command_path = commands_dir / cmd_name
         if command_path.exists():
             command_path.unlink()
-            click.echo(f"   /{cmd_name.replace('.md', '')} removed")
+            click.echo(f"   Removed old command: {cmd_name}")
 
     # 4. Remove CLAUDE.md
     click.echo("\n4. Removing CLAUDE.md...")
@@ -470,6 +496,16 @@ def doctor():
     click.echo("  3. Check that 'pip show oubli' shows the expected version")
 
 
+@main.command("clear-db")
+@click.confirmation_option(prompt="This will permanently delete ALL memories. Continue?")
+def clear_db():
+    """Delete all memories from the database. Core Memory is preserved."""
+    from .storage import MemoryStore
+    store = MemoryStore()
+    count = store.delete_all()
+    click.echo(f"Deleted {count} memories. Core Memory was preserved.")
+
+
 @main.command("inject-context")
 def inject_context():
     """Inject core memory into conversation (called by hooks)."""
@@ -506,7 +542,7 @@ def session_start():
 
 @main.command()
 @click.option("--output", "-o", type=click.Path(), default=None,
-              help="Output path for HTML file (default: ~/.oubli/graph.html)")
+              help="Output path for HTML file (default: .oubli/graph.html)")
 @click.option("--no-open", is_flag=True, default=False,
               help="Generate file but don't open in browser")
 def viz(output, no_open):
@@ -554,7 +590,7 @@ def logo(speed, static, no_interactive):
 @click.option("--demo", is_flag=True, default=False,
               help="Use demo data instead of real memories (for marketing)")
 @click.option("--output", "-o", type=click.Path(), default=None,
-              help="Output path for HTML file (default: ~/.oubli/fractal.html)")
+              help="Output path for HTML file (default: .oubli/fractal.html)")
 @click.option("--no-open", is_flag=True, default=False,
               help="Generate file but don't open in browser")
 def fractal(demo, output, no_open):
@@ -587,7 +623,7 @@ def fractal(demo, output, no_open):
         try:
             from .storage import MemoryStore
             store = MemoryStore()
-            memories = store.list(limit=1000)
+            memories = store.get_all(limit=1000)
 
             if not memories:
                 click.echo("No memories found. Use --demo for sample data.")

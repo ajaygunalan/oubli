@@ -1,9 +1,11 @@
 """Configuration and data directory resolution for Oubli.
 
-Data is always stored globally in ~/.oubli/ to share memories across projects.
+Data is stored in .oubli/ under the current working directory (per-project).
+OUBLI_DATA_DIR env var overrides this if set.
 Configuration files (.mcp.json, .claude/) are installed locally per project.
 """
 
+import os
 from pathlib import Path
 
 
@@ -14,11 +16,14 @@ MCP_CONFIG_NAME = ".mcp.json"
 
 
 def get_data_dir() -> Path:
-    """Get the data directory (~/.oubli/).
+    """Get the data directory.
 
-    Data is always stored globally to share memories across all projects.
+    Returns OUBLI_DATA_DIR if set, otherwise .oubli/ in the current working directory.
     """
-    return Path.home() / OUBLI_DIR_NAME
+    env_dir = os.environ.get("OUBLI_DATA_DIR")
+    if env_dir:
+        return Path(env_dir)
+    return Path.cwd() / OUBLI_DIR_NAME
 
 
 def get_claude_dir(project_dir: Path | None = None) -> Path:
@@ -45,24 +50,3 @@ def get_mcp_config_path(project_dir: Path | None = None) -> Path:
     """
     project_dir = Path(project_dir) if project_dir else Path.cwd()
     return project_dir / MCP_CONFIG_NAME
-
-
-# Legacy aliases for backwards compatibility during transition
-def resolve_data_dir(prefer_local: bool = True) -> Path:
-    """Legacy function - always returns global data dir now."""
-    return get_data_dir()
-
-
-def get_global_data_dir() -> Path:
-    """Legacy alias for get_data_dir()."""
-    return get_data_dir()
-
-
-def get_local_data_dir(project_dir: Path | None = None) -> Path:
-    """Legacy function - returns global data dir (local data dirs no longer used)."""
-    return get_data_dir()
-
-
-def is_local_installation(data_dir: Path | None = None) -> bool:
-    """Legacy function - always returns False (no local installations anymore)."""
-    return False

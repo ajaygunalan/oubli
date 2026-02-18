@@ -1,3 +1,7 @@
+---
+description: Consolidate raw memories into higher-level insights and update Core Memory
+---
+
 # Synthesize Memories
 
 Consolidate raw memories into higher-level insights and update Core Memory.

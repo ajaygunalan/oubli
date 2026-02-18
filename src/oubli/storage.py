@@ -10,11 +10,7 @@ import json
 import lancedb
 import pyarrow as pa
 
-from .config import resolve_data_dir, get_global_data_dir
-
-
-# For backwards compatibility
-DEFAULT_DATA_DIR = get_global_data_dir()
+from .config import get_data_dir
 
 # Embedding dimensions for all-MiniLM-L6-v2
 EMBEDDING_DIMS = 384
@@ -117,20 +113,14 @@ class MemoryStore:
 
     TABLE_NAME = "memories"
 
-    def __init__(self, data_dir: Optional[Path] = None, auto_resolve: bool = True):
+    def __init__(self, data_dir: Optional[Path] = None):
         """Initialize the memory store.
 
         Args:
-            data_dir: Directory for storing data. If None, auto-resolves.
-            auto_resolve: If True and data_dir is None, check for local .oubli/
-                         first, then fall back to global ~/.oubli/.
+            data_dir: Directory for storing data. If None, uses .oubli/ in cwd
+                     (or OUBLI_DATA_DIR env var if set).
         """
-        if data_dir:
-            self.data_dir = Path(data_dir)
-        elif auto_resolve:
-            self.data_dir = resolve_data_dir(prefer_local=True)
-        else:
-            self.data_dir = DEFAULT_DATA_DIR
+        self.data_dir = Path(data_dir) if data_dir else get_data_dir()
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize LanceDB

@@ -51,7 +51,7 @@ The Core Memory is a special, always-present context block (~2K tokens) that con
 - Key preferences: Technical choices, tools, patterns
 - Current focus: What's top-of-mind right now
 
-**Storage:** `~/.oubli/core_memory.md` - A markdown file that can be viewed/edited directly.
+**Storage:** `.oubli/core_memory.md` - A markdown file that can be viewed/edited directly.
 
 **Update triggers:**
 1. **Immediately for fundamental changes:** Family info, work changes, location changes
@@ -77,7 +77,7 @@ Both storage AND retrieval are fractal:
 | Storage | LanceDB | Embedded (no server), hybrid search, just files |
 | Search | Hybrid (BM25 + Vector) | Combines keyword and semantic matching via RRF |
 | Embeddings | sentence-transformers | `all-MiniLM-L6-v2` (384 dims, ~80MB) |
-| Interface | Claude Code Plugin | Hooks + MCP server + slash commands |
+| Interface | Claude Code Plugin | Hooks + MCP server + skills |
 | Language | Python | Ecosystem, ease of install |
 
 ### Directory Structure
@@ -93,17 +93,19 @@ oubli/
 │   ├── core_memory.py           # Core Memory file operations
 │   └── data/
 │       ├── CLAUDE.md            # Instructions for Claude on using the memory system
-│       └── commands/
-│           ├── clear-memories.md  # /clear-memories slash command
-│           └── synthesize.md      # /synthesize skill
+│       └── skills/
+│           ├── clear-memories/SKILL.md    # /clear-memories skill
+│           ├── save/SKILL.md              # /save skill
+│           ├── synthesize/SKILL.md        # /synthesize skill
+│           └── visualize-memory/SKILL.md  # /visualize-memory skill
 ├── pyproject.toml               # Package definition
 ├── README.md                    # Documentation
 └── CLAUDE.md                    # Project development instructions
 ```
 
-**User data directory (`~/.oubli/`):**
+**User data directory (`.oubli/`):**
 ```
-~/.oubli/
+.oubli/
 ├── core_memory.md               # Core Memory (~2K tokens, always loaded)
 └── memories.lance/              # LanceDB database
 ```
@@ -170,7 +172,7 @@ Then restart Claude Code.
 
 **Everything is project-local by default.** Each project gets its own:
 - `.mcp.json` - MCP server registration
-- `.claude/` - Hooks, commands, instructions
+- `.claude/` - Hooks, skills, instructions
 - `.oubli/` - Memories and Core Memory
 
 ### Global Installation (Optional)
@@ -179,7 +181,7 @@ Then restart Claude Code.
 oubli setup --global
 ```
 
-This registers the MCP server globally and puts everything in `~/.claude/` and `~/.oubli/`.
+This registers the MCP server globally and puts everything in `~/.claude/` and `.oubli/`.
 
 ### What Gets Installed
 
@@ -189,7 +191,7 @@ This registers the MCP server globally and puts everything in `~/.claude/` and `
 |-----------|----------|-------------|
 | MCP Server | `.mcp.json` | 15 memory tools |
 | Hooks | `.claude/settings.local.json` | SessionStart, PreCompact, Stop |
-| Slash Commands | `.claude/commands/` | `/clear-memories`, `/synthesize`, `/visualize-memory` |
+| Skills | `.claude/skills/` | `/clear-memories`, `/save`, `/synthesize`, `/visualize-memory` |
 | Instructions | `.claude/CLAUDE.md` | How Claude should use the memory system |
 | Data | `.oubli/` | LanceDB database + Core Memory file |
 
@@ -199,9 +201,9 @@ This registers the MCP server globally and puts everything in `~/.claude/` and `
 |-----------|----------|-------------|
 | MCP Server | `claude mcp` registry | 15 memory tools |
 | Hooks | `~/.claude/settings.json` | SessionStart, PreCompact, Stop |
-| Slash Commands | `~/.claude/commands/` | `/clear-memories`, `/synthesize`, `/visualize-memory` |
+| Skills | `~/.claude/skills/` | `/clear-memories`, `/save`, `/synthesize`, `/visualize-memory` |
 | Instructions | `~/.claude/CLAUDE.md` | How Claude should use the memory system |
-| Data | `~/.oubli/` | LanceDB database + Core Memory file |
+| Data | `.oubli/` | LanceDB database + Core Memory file |
 
 ### Uninstall
 
@@ -294,7 +296,7 @@ Hooks are installed in `.claude/settings.local.json` (local) or `~/.claude/setti
 | `core_memory_get` | Get core memory content |
 | `core_memory_save` | Save/replace core memory content |
 
-### 3. Slash Commands / Skills
+### 3. Skills
 
 #### /clear-memories
 Clears all memories from the database after user confirmation.
@@ -436,9 +438,9 @@ or memory_get(id) for full_text         │
 
 All configuration uses sensible defaults. No config file required.
 
-**Storage:** `~/.oubli/memories.lance/`
+**Storage:** `.oubli/memories.lance/`
 
-**Core Memory:** `~/.oubli/core_memory.md` (max ~2K tokens)
+**Core Memory:** `.oubli/core_memory.md` (max ~2K tokens)
 
 **Synthesis threshold:** 5 unsynthesized L0 memories
 
@@ -475,9 +477,11 @@ dependencies = [
 - [x] Deduplication during synthesis
 - [x] 15 MCP tools including synthesis and fractal drill-down
 - [x] Hooks: SessionStart (core memory), PreCompact, Stop
-- [x] /clear-memories slash command
+- [x] /clear-memories skill
+- [x] /save skill for user-triggered memory checkpoints
 - [x] /synthesize skill with Core Memory update
-- [x] Synthesis via /synthesize command (user-triggered)
+- [x] /visualize-memory skill
+- [x] Synthesis via /synthesize (user-triggered)
 - [x] `memory_prepare_synthesis` for duplicate merging + grouping
 - [x] Immediate Core Memory updates for fundamental changes
 - [x] Proactive memory behavior instructions (CLAUDE.md)
@@ -501,7 +505,7 @@ dependencies = [
 | Subagents | Synthesizer subagent | Inline synthesis via tools |
 | Skills | memory-awareness skill | Proactive behavior in CLAUDE.md |
 | Hooks | SessionStart, Stop | SessionStart, PreCompact, Stop |
-| Commands | Multiple /oubli:* commands | /clear-memories, /synthesize |
+| Skills | Multiple /oubli:* commands | /clear-memories, /save, /synthesize, /visualize-memory |
 | Tools | 9 tools | 15 tools |
 | Core Memory updates | After synthesis only | Immediate for fundamental changes + after synthesis |
 | Deduplication | Not specified | During synthesis via `memory_prepare_synthesis` |
