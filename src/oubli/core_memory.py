@@ -2,7 +2,7 @@
 
 Core memory is a ~2K token markdown file that contains the most important
 information about the project/user, always loaded at session start.
-Stored in .oubli/core_memory.md per-project.
+Stored in ~/.oubli/<project>/core_memory.md per-project.
 """
 
 from pathlib import Path
@@ -18,7 +18,7 @@ def get_core_memory_path(data_dir: Optional[Path] = None) -> Path:
     """Get the path to the core memory file.
 
     Args:
-        data_dir: Explicit data directory. If None, uses .oubli/ in cwd.
+        data_dir: Explicit data directory. If None, uses ~/.oubli/<project>/.
     """
     data_dir = Path(data_dir) if data_dir else get_data_dir()
     return data_dir / CORE_MEMORY_FILENAME
@@ -28,7 +28,7 @@ def load_core_memory(data_dir: Optional[Path] = None) -> str:
     """Load core memory content from file.
 
     Args:
-        data_dir: Explicit data directory. If None, uses .oubli/ in cwd.
+        data_dir: Explicit data directory. If None, uses ~/.oubli/<project>/.
 
     Returns:
         The core memory content, or empty string if file doesn't exist.
@@ -44,7 +44,7 @@ def save_core_memory(content: str, data_dir: Optional[Path] = None) -> None:
 
     Args:
         content: The markdown content to save.
-        data_dir: Optional custom data directory. If None, uses .oubli/ in cwd.
+        data_dir: Optional custom data directory. If None, uses ~/.oubli/<project>/.
     """
     data_dir = Path(data_dir) if data_dir else get_data_dir()
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -56,6 +56,6 @@ def core_memory_exists(data_dir: Optional[Path] = None) -> bool:
     """Check if core memory file exists.
 
     Args:
-        data_dir: Explicit data directory. If None, uses .oubli/ in cwd.
+        data_dir: Explicit data directory. If None, uses ~/.oubli/<project>/.
     """
     return get_core_memory_path(data_dir).exists()

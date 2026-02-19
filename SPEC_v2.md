@@ -51,7 +51,7 @@ The Core Memory is a special, always-present context block (~2K tokens) that con
 - Key preferences: Technical choices, tools, patterns
 - Current focus: What's top-of-mind right now
 
-**Storage:** `.oubli/core_memory.md` - A markdown file that can be viewed/edited directly.
+**Storage:** `~/.oubli/<project>/core_memory.md` - A markdown file that can be viewed/edited directly.
 
 **Update triggers:**
 1. **Immediately for fundamental changes:** Family info, work changes, location changes
@@ -103,9 +103,9 @@ oubli/
 └── CLAUDE.md                    # Project development instructions
 ```
 
-**User data directory (`.oubli/`):**
+**User data directory (`~/.oubli/<project>/`):**
 ```
-.oubli/
+~/.oubli/<project>/
 ├── core_memory.md               # Core Memory (~2K tokens, always loaded)
 └── memories.lance/              # LanceDB database
 ```
@@ -173,7 +173,7 @@ Then restart Claude Code.
 **Everything is project-local by default.** Each project gets its own:
 - `.mcp.json` - MCP server registration
 - `.claude/` - Hooks, skills, instructions
-- `.oubli/` - Memories and Core Memory
+- `~/.oubli/<project>/` - Memories and Core Memory (on home filesystem)
 
 ### Global Installation (Optional)
 
@@ -181,7 +181,7 @@ Then restart Claude Code.
 oubli setup --global
 ```
 
-This registers the MCP server globally and puts everything in `~/.claude/` and `.oubli/`.
+This registers the MCP server globally and puts everything in `~/.claude/` and `~/.oubli/<project>/`.
 
 ### What Gets Installed
 
@@ -193,7 +193,7 @@ This registers the MCP server globally and puts everything in `~/.claude/` and `
 | Hooks | `.claude/settings.local.json` | SessionStart, PreCompact, Stop |
 | Skills | `.claude/skills/` | `/clear-memories`, `/save`, `/synthesize`, `/visualize-memory` |
 | Instructions | `.claude/CLAUDE.md` | How Claude should use the memory system |
-| Data | `.oubli/` | LanceDB database + Core Memory file |
+| Data | `~/.oubli/<project>/` | LanceDB database + Core Memory file |
 
 #### Global Installation (`--global`)
 
@@ -203,7 +203,7 @@ This registers the MCP server globally and puts everything in `~/.claude/` and `
 | Hooks | `~/.claude/settings.json` | SessionStart, PreCompact, Stop |
 | Skills | `~/.claude/skills/` | `/clear-memories`, `/save`, `/synthesize`, `/visualize-memory` |
 | Instructions | `~/.claude/CLAUDE.md` | How Claude should use the memory system |
-| Data | `.oubli/` | LanceDB database + Core Memory file |
+| Data | `~/.oubli/<project>/` | LanceDB database + Core Memory file |
 
 ### Uninstall
 
@@ -438,9 +438,9 @@ or memory_get(id) for full_text         │
 
 All configuration uses sensible defaults. No config file required.
 
-**Storage:** `.oubli/memories.lance/`
+**Storage:** `~/.oubli/<project>/memories.lance/`
 
-**Core Memory:** `.oubli/core_memory.md` (max ~2K tokens)
+**Core Memory:** `~/.oubli/<project>/core_memory.md` (max ~2K tokens)
 
 **Synthesis threshold:** 5 unsynthesized L0 memories
 

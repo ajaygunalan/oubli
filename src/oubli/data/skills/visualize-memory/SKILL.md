@@ -15,7 +15,7 @@ Run the following command to generate and open the memory graph:
 oubli viz
 ```
 
-This opens `.oubli/graph.html` in your default browser showing:
+This opens `~/.oubli/<project>/graph.html` in your default browser showing:
 - **Hierarchical tree** - Raw memories at top, synthesized insights below
 - **Topic sidebar** - Filter by topic to focus on specific areas
 - **Color coding** - Blue (L0 raw), Green (L1), Purple (L2+)

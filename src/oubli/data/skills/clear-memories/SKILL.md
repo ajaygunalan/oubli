@@ -17,9 +17,9 @@ Clear all memories from the Oubli memory database. This is destructive and canno
    oubli clear-db
    ```
 
-3. Report: "Deleted {n} memories. Core Memory (.oubli/core_memory.md) was preserved."
+3. Report: "Deleted {n} memories. Core Memory was preserved."
 
 ## Note
 
 - Only clears the memories database, NOT Core Memory
-- Core Memory can be manually edited at `.oubli/core_memory.md`
+- Core Memory can be manually edited at `~/.oubli/<project>/core_memory.md`

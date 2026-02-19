@@ -4,7 +4,7 @@ Provides command-line interface for setup, memory operations and session hooks.
 
 Architecture:
 - Config files (.mcp.json, .claude/) are installed locally per project
-- Data (.oubli/) is stored per-project in the project directory
+- Data is stored at ~/.oubli/<project-name>/ (on the home filesystem)
 """
 
 import json
@@ -94,12 +94,12 @@ def setup():
     - .claude/skills/ (skills)
     - .claude/CLAUDE.md (instructions)
 
-    Data is stored in .oubli/ inside the project directory (per-project).
+    Data is stored at ~/.oubli/<project-name>/ on the home filesystem.
     """
     project_dir = Path.cwd()
     data_path = get_package_data_path()
     claude_dir = project_dir / ".claude"
-    oubli_dir = get_data_dir()  # .oubli/ in project directory
+    oubli_dir = get_data_dir()  # ~/.oubli/<project>/
 
     version = get_version()
     click.echo(f"Setting up Oubli v{version} - Fractal Memory System for Claude Code")
@@ -294,7 +294,7 @@ def uninstall():
     - .claude/skills/ (removes skills)
     - .claude/CLAUDE.md
 
-    Note: Data (.oubli/) is NOT deleted to preserve your memories.
+    Note: Data (~/.oubli/<project>/) is NOT deleted to preserve your memories.
     """
     project_dir = Path.cwd()
     claude_dir = project_dir / ".claude"

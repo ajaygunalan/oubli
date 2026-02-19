@@ -117,7 +117,7 @@ class MemoryStore:
         """Initialize the memory store.
 
         Args:
-            data_dir: Directory for storing data. If None, uses .oubli/ in cwd
+            data_dir: Directory for storing data. If None, uses ~/.oubli/<project>/
                      (or OUBLI_DATA_DIR env var if set).
         """
         self.data_dir = Path(data_dir) if data_dir else get_data_dir()

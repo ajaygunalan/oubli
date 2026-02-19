@@ -1,7 +1,7 @@
 """Configuration and data directory resolution for Oubli.
 
-Data is stored in .oubli/ under the current working directory (per-project).
-OUBLI_DATA_DIR env var overrides this if set.
+Data is stored in ~/.oubli/<project-name>/ — per-project isolation on the home
+filesystem.  OUBLI_DATA_DIR env var overrides this if set.
 Configuration files (.mcp.json, .claude/) are installed locally per project.
 """
 
@@ -18,12 +18,15 @@ MCP_CONFIG_NAME = ".mcp.json"
 def get_data_dir() -> Path:
     """Get the data directory.
 
-    Returns OUBLI_DATA_DIR if set, otherwise .oubli/ in the current working directory.
+    Returns OUBLI_DATA_DIR if set, otherwise ~/.oubli/<project-name>/.
+    Storing under ~ guarantees a POSIX filesystem (ext4 etc.) so LanceDB
+    atomic renames always work, even when the project lives on exFAT/NTFS.
     """
     env_dir = os.environ.get("OUBLI_DATA_DIR")
     if env_dir:
         return Path(env_dir)
-    return Path.cwd() / OUBLI_DIR_NAME
+    project_name = Path.cwd().name
+    return Path.home() / OUBLI_DIR_NAME / project_name
 
 
 def get_claude_dir(project_dir: Path | None = None) -> Path:
